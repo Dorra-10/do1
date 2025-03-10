@@ -35,33 +35,30 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($users as $user)
-                                    <tr>
+                                    <tr id="user-row-{{ $user->id }}">
                                         <td>{{ $user->id }}</td>
                                         <td>{{ $user->name }}</td>
                                         <td>{{ $user->email }}</td>
-                                         <td class="text-left">
-                                            @if (!empty($user->getRoleNames()))
-                                                @foreach ($user->getRoleNames() as $rolename)
-                                                    <span class="badge badge-pill bg-success inv-badge">{{ $rolename }}</span>
-                                                @endforeach
-                                            @endif
+                                        <td class="text-left">
+                                            @foreach ($user->getRoleNames() as $rolename)
+                                                <span class="badge badge-pill bg-success inv-badge">{{ $rolename }}</span>
+                                            @endforeach
                                         </td>
-                                        <td class="text-right" >
-                                          @can('update user')  
-                                            <a  href="{{ url('users/'.$user->id.'/edit') }}">
+                                        <td class="text-right">
+                                            @can('update user')  
+                                            <a href="{{ url('users/'.$user->id.'/edit') }}">
                                                 <i class="fas fa-pencil-alt m-r-5"></i> 
                                             </a>
-                                          @endcan
-                                          @can('delete user')  
-                                            <a  href="{{ url('users/'.$user->id.'/delete') }}" >
+                                            @endcan
+                                            @can('delete user')  
+                                            <a href="#" class="delete-user-btn" data-id="{{ $user->id }}" data-toggle="modal" data-target="#delete_modal">
                                                 <i class="fas fa-trash-alt m-r-5"></i> 
                                             </a>
-                                          @endcan  
-                                            
+                                            @endcan  
                                         </td>
                                     </tr>
                                     @endforeach                               
-                                 </tbody>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -69,23 +66,61 @@
             </div>
         </div>
     </div>
-    <div id="delete_asset" class="modal fade delete-modal" role="dialog">
+
+    <!-- Modal de confirmation de suppression -->
+    <div id="delete_modal" class="modal fade delete-modal" role="dialog">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-body text-center">
-                    <img src="" alt="" width="50" height="46">
-                    <h3 class="delete_class">Are you sure want to delete this User?</h3>
+                    <h3 class="delete_class">Are you sure you want to delete this user?</h3>
                     <div class="m-t-20">
-                        <a href="#" class="btn btn-white" data-dismiss="modal">Close</a>
-                        <a href="{{ url('users/'.$user->id.'/delete') }}">
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                        </a>
+                        <a href="#" class="btn btn-white" data-dismiss="modal">No</a>
+                        <button type="button" id="confirm_delete" class="btn btn-danger">Yes</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Script pour gérer la suppression -->
+<script>
+    $(document).ready(function() {
+        let userIdToDelete = null;
+
+        // Ouvrir la popup et stocker l'ID de l'utilisateur
+        $('.delete-user-btn').on('click', function() {
+            userIdToDelete = $(this).data('id');
+        });
+
+        // Lorsque l'admin clique sur "Yes"
+        $('#confirm_delete').on('click', function() {
+            if (!userIdToDelete) return;
+
+            let deleteUrl = '/users/' + userIdToDelete;
+            console.log("Deleting user:", deleteUrl); // Debugging
+
+            $.ajax({
+                url: deleteUrl,
+                type: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    console.log("Server Response:", response); // Debugging
+
+                    // Supprimer la ligne du tableau après suppression
+                    $('#user-row-' + userIdToDelete).remove();
+                    
+                    // Fermer la popup
+                    $('#delete_modal').modal('hide');
+                },
+                error: function(xhr) {
+                    console.error("Error deleting user:", xhr.responseText); // Debugging
+                    alert("Failed to delete user. Check console.");
+                }
+            });
+        });
+    });
+</script>
 @endsection
-
-
