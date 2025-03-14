@@ -3,9 +3,9 @@
         <div id="sidebar-menu" class="sidebar-menu">
             <ul>
                 <li class="active"> 
-                    <a href="{{url('/dashboard')}}">
-                        <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
-                    </a> 
+				<a href="{{ url('/projects') }}" class="nav-link">
+            <i class="fas fa-folder"></i> <span>Projects</span>
+        </a>
                 </li>
                 <li class="list-divider"></li>
 

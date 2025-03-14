@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\DB;
 class RoleController extends Controller
 
 {
-  
-
     public function index()
     {
         $roles = Role::get();
@@ -86,16 +84,13 @@ class RoleController extends Controller
             'rolePermissions' => $rolePermissions
         ]);
     }
-
-    public function givePermissionToRole(Request $request, $roleId)
-    {
+    public function givePermissionToRole(Request $request, $roleId){
         $request->validate([
             'permission' => 'required'
         ]);
 
         $role = Role::findOrFail($roleId);
         $role->syncPermissions($request->permission);
-
         return redirect()->back()->with('status','Permissions added to role');
     }
 }

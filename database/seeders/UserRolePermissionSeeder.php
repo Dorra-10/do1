@@ -32,61 +32,28 @@ class UserRolePermissionSeeder extends Seeder
         Permission::create(['name' => 'update user']);
         Permission::create(['name' => 'delete user']);
 
-        Permission::create(['name' => 'view product']);
-        Permission::create(['name' => 'create product']);
-        Permission::create(['name' => 'update product']);
-        Permission::create(['name' => 'delete product']);
-
-
+        Permission::create(['name' => 'create project']);
+        Permission::create(['name' => 'update project']);
+        Permission::create(['name' => 'delete project']);
+    
         // Create Roles
-        $superAdminRole = Role::create(['name' => 'super-admin']); //as super-admin
-        $adminRole = Role::create(['name' => 'admin']);
-        $staffRole = Role::create(['name' => 'staff']);
-        $userRole = Role::create(['name' => 'user']);
+        $adminRole = Role::create(['name' => 'admin']); //as admin
+        $superviseurRole = Role::create(['name' => 'superviseur']);
+        $employeeRole = Role::create(['name' => 'employee']);
+        
 
-        // Lets give all permission to super-admin role.
+        // Lets give all permission to admin role.
         $allPermissionNames = Permission::pluck('name')->toArray();
 
-        $superAdminRole->givePermissionTo($allPermissionNames);
+        $adminRole->givePermissionTo($allPermissionNames);
 
-        // Let's give few permissions to admin role.
-        $adminRole->givePermissionTo(['create role', 'view role', 'update role']);
-        $adminRole->givePermissionTo(['create permission', 'view permission']);
-        $adminRole->givePermissionTo(['create user', 'view user', 'update user']);
-        $adminRole->givePermissionTo(['create product', 'view product', 'update product']);
-
-
+        // Let's give few permissions to superviseur role.
+        $superviseurRole->givePermissionTo(['create project', 'view project', 'update project','delete project']);
+        $employeeRole->givePermissionTo(['create project', 'view project', 'update project','delete project']);
+        
+    
         // Let's Create User and assign Role to it.
 
-    $superAdminUser = User::firstOrCreate([
-                    'email' => 'superadmin@gmail.com', ], 
-                 [
-                    'name' => 'Super Admin',
-                    'email' => 'superadmin@gmail.com',
-                    'password' => Hash::make ('12345678'),
-                ]);
-        $superAdminUser->assignRole($superAdminRole);
 
-
-        $adminUser = User::firstOrCreate([
-                            'email' => 'admin@gmail.com'
-                        ], [
-                            'name' => 'Admin',
-                            'email' => 'admin@gmail.com',
-                            'password' => Hash::make ('12345678'),
-                        ]);
-
-        $adminUser->assignRole($adminRole);
-
-
-        $staffUser = User::firstOrCreate([
-                            'email' => 'staff@gmail.com',
-                        ], [
-                            'name' => 'Staff',
-                            'email' => 'staff@gmail.com',
-                            'password' => Hash::make('12345678'),
-                        ]);
-
-        $staffUser->assignRole($staffRole);
     }
 }

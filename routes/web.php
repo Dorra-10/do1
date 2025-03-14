@@ -3,34 +3,47 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
+// Routes accessibles uniquement aux utilisateurs authentifiés
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-   
-
 });
 
-Route::group(['middleware' => ['role:super-admin|admin']], function() {
+// Routes accessibles uniquement aux super-admin ou admin
+Route::group(['middleware' => ['role:super-admin|admin']], function () {
+    // Permissions
+    Route::resource('permissions', PermissionController::class);
+    Route::get('permissions/{permissionId}/delete', [PermissionController::class, 'destroy']);
 
-    Route::resource('permissions',  App\Http\Controllers\PermissionController::class);
-    Route::get('permissions/{permissionId}/delete', [App\Http\Controllers\PermissionController::class, 'destroy']);
-    Route::resource('roles', App\Http\Controllers\RoleController::class);
-    Route::get('roles/{roleId}/delete', [App\Http\Controllers\RoleController::class, 'destroy']);
-    Route::get('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'addPermissionToRole']);
-    Route::put('roles/{roleId}/give-permissions', [App\Http\Controllers\RoleController::class, 'givePermissionToRole']);
-    Route::resource('users', App\Http\Controllers\UserController::class);
-    Route::delete('/users/{id}', 'UserController@destroy')->name('users.destroy');
+    // Roles
+    Route::resource('roles', RoleController::class);
+    Route::get('roles/{roleId}/delete', [RoleController::class, 'destroy']);
+    Route::get('roles/{roleId}/give-permissions', [RoleController::class, 'addPermissionToRole']);
+    Route::put('roles/{roleId}/give-permissions', [RoleController::class, 'givePermissionToRole']);
+
+    // Users
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/create', [UserController::class, 'create'])->name('users.create'); 
+    Route::post('/users', [UserController::class, 'store'])->name('users.store');
+    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+    Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
+
+    // Projects
+    Route::resource('projects', ProjectController::class);
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::post('/projects/store', [ProjectController::class, 'store'])->name('projects.store');
+    Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
+    Route::delete('/projects/{id}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+   
 
 });
 
