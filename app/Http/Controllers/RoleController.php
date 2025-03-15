@@ -63,11 +63,17 @@ class RoleController extends Controller
     }
 
     public function destroy($roleId)
-    {
-        $role = Role::find($roleId);
-        $role->delete();
-        return redirect('roles')->with('status','Role Deleted Successfully');
-    }
+{
+    // Rechercher le rôle à supprimer
+    $role = Role::findOrFail($roleId);
+
+    // Supprimer le rôle
+    $role->delete();
+
+    // Retourner à la page avec un message de succès
+    return redirect()->route('roles.index')->with('status', 'Role deleted successfully');
+}
+
 
     public function addPermissionToRole($roleId)
     {

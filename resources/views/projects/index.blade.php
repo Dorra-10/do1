@@ -10,7 +10,9 @@
                 <div class="col">
                     <div class="mt-5">
                         <h4 class="card-title float-left mt-2">Projects</h4>
+                        @can('update project')
                         <a href="#" class="btn btn-primary float-right veiwbutton" data-toggle="modal" data-target="#addProjectModal">Create Project</a>
+                        @endcan
                     </div>
                 </div>
             </div>
@@ -58,6 +60,7 @@
                                         <td>{{ $project->date_added }}</td>
                                         <td class="text-right">
                                             <!-- Edit Button -->
+                                            @can('update project')
                                             <a href="#" class="edit-project-btn" 
                                                data-id="{{ $project->id }}" 
                                                data-name="{{ $project->name }}" 
@@ -67,7 +70,8 @@
                                                data-target="#editProjectModal">
                                                 <i class="fas fa-pencil-alt m-r-5"></i> 
                                             </a>
-
+                                            @endcan
+                                            @can('delete project')
                                             <!-- Delete Button -->
                                             <a href="#" class="delete-project-btn" 
                                                data-id="{{ $project->id }}" 
@@ -75,6 +79,7 @@
                                                data-target="#delete_modal">
                                                 <i class="fas fa-trash-alt m-r-5"></i> 
                                             </a>
+                                            @endcan
                                         </td>
                                     </tr>
                                     @endforeach                               

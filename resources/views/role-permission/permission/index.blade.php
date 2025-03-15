@@ -15,8 +15,17 @@
                 </div>
             </div>
             @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
-            @endif
+    <div id="successMessage" class="alert alert-success">
+        {{ session('status') }}
+    </div>
+    <script>
+        // Faire disparaître le message après 2 secondes
+        setTimeout(function() {
+            document.getElementById('successMessage').style.display = 'none';
+        }, 2000);
+    </script>
+@endif
+
         </div>
         <div class="row">
             <div class="col-sm-12">
@@ -43,11 +52,12 @@
                                                         <i class="fas fa-pencil-alt m-r-5"></i> 
                                                     </a>
                                                 @endcan
-                                                @can('delete permission')    
-                                                    <a href="{{ url('permissions/'.$permission->id.'/delete') }}" >
+                                                @can('delete permission')
+                                                    <a href="#" class="delete-btn" data-toggle="modal" data-target="#deletePermissionModal" data-url="{{ route('permissions.destroy', $permission->id) }}">
                                                         <i class="fas fa-trash-alt m-r-5"></i>
                                                     </a>
-                                                @endcan    
+                                                @endcan
+  
 
                                            
                                         </td>
@@ -61,23 +71,38 @@
             </div>
         </div>
     </div>
-    <div id="delete_asset" class="modal fade delete-modal" role="dialog">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center">
-                    <img src="" alt="" width="50" height="46">
-                    <h3 class="delete_class">Are you sure want to delete this Permission?</h3>
-                    <div class="m-t-20">
-                        <a href="#" class="btn btn-white" data-dismiss="modal">Close</a>
-                        <a href="{{ url('permissions/'.$permission->id.'/delete') }}">
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                        </a>
-                    </div>
+    <!-- Modal de confirmation -->
+    <div id="deletePermissionModal" class="modal fade delete-modal" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <h3 class="delete_class">Are you sure you want to delete this Permission?</h3>
+                <div class="m-t-20">
+                    <a href="#" class="btn btn-white" data-dismiss="modal">No</a>
+                    <form id="deletePermissionForm" method="POST" action="" style="display: inline;">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger">Yes</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
-@endsection
 
+
+<script>
+    // Lors du clic sur le lien de suppression, mettre à jour l'URL du formulaire
+    $('#deletePermissionModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Bouton qui a ouvert le modal
+        var url = button.data('url'); // URL de suppression de la permission
+
+        var modal = $(this);
+        modal.find('#deletePermissionForm').attr('action', url); // Mettre à jour l'action du formulaire
+        
+    });
+    
+</script>
+
+@endsection
 

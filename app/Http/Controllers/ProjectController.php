@@ -7,6 +7,7 @@ use Spatie\Permission\Models\Role;
 
 class ProjectController extends Controller
 {
+    
     // Méthode pour enregistrer un nouveau projet
     public function store(Request $request)
     {

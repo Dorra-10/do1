@@ -15,8 +15,17 @@
                 </div>
             </div>
             @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
-            @endif
+    <div id="successMessage" class="alert alert-success">
+        {{ session('status') }}
+    </div>
+    <script>
+        // Faire disparaître le message après 2 secondes
+        setTimeout(function() {
+            document.getElementById('successMessage').style.display = 'none';
+        }, 2000);
+    </script>
+@endif
+
         </div>
         <div class="row">
             <div class="col-sm-12">
@@ -38,25 +47,25 @@
                                         <td>{{ $role->id }}</td>
                                         <td>{{ $role->name }}</td>
                                         <td>
-													<div class="actions"> <a href="{{ url('roles/'.$role->id.'/give-permissions') }}" class="btn btn-sm bg-success-light mr-2">Add / Edit Role Permission</a> </div>
-										</td>
+                                            <div class="actions">
+                                                <a href="{{ url('roles/'.$role->id.'/give-permissions') }}" class="btn btn-sm bg-success-light mr-2">Add / Edit Role Permission</a>
+                                            </div>
+                                        </td>
                                         <td class="text-right">
-                                            
-                                               @can('update role')
-                                                    <a  href="{{ url('roles/'.$role->id.'/edit') }}">
-                                                        <i class="fas fa-pencil-alt m-r-5"></i> 
-                                                    </a>
-                                               @endcan
-                                               @can('delete role')     
-                                                    <a  href="{{ url('roles/'.$role->id.'/delete') }}" >
-                                                        <i class="fas fa-trash-alt m-r-5"></i>
-                                                    </a>
-                                               @endcan     
-                                             
+                                            @can('update role')
+                                            <a href="{{ url('roles/'.$role->id.'/edit') }}">
+                                                <i class="fas fa-pencil-alt m-r-5"></i> 
+                                            </a>
+                                            @endcan
+                                            @can('delete role')
+                                            <a href="#" class="delete-btn" data-toggle="modal" data-target="#deletRoleModal" data-url="{{ url('roles/'.$role->id.'/delete') }}">
+                                                <i class="fas fa-trash-alt m-r-5"></i>
+                                            </a>
+                                            @endcan     
                                         </td>
                                     </tr>
                                     @endforeach                               
-                                 </tbody>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -64,23 +73,48 @@
             </div>
         </div>
     </div>
-    <div id="delete_asset" class="modal fade delete-modal" role="dialog">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center">
-                    <img src="" alt="" width="50" height="46">
-                    <h3 class="delete_class">Are you sure want to delete this Role?</h3>
-                    <div class="m-t-20">
-                        <a href="#" class="btn btn-white" data-dismiss="modal">Close</a>
-                        <a href="{{ url('roles/'.$role->id.'/delete') }}">
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                        </a>
-                    </div>
+    
+    <!-- Modal de confirmation de suppression -->
+    <div id="deletRoleModal" class="modal fade delete-modal" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <h3 class="delete_class">Are you sure you want to delete this Role?</h3>
+                <div class="m-t-20">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">No</button>
+                    <form id="deleteRoleForm" method="POST" action="" style="display: inline;">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger">Yes</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+</div>
+
+<script>
+    // Lors du clic sur le lien de suppression, mettre à jour l'URL du formulaire
+    $('#deletRoleModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Bouton qui a ouvert le modal
+        var url = button.data('url'); // URL de suppression du rôle
+
+        var modal = $(this);
+        modal.find('#deleteRoleForm').attr('action', url); // Mettre à jour l'action du formulaire
+        
+        // Ajouter un log pour déboguer l'URL
+        console.log("URL de suppression : " + url);
+    });
+    
+    // Vérification de l'URL du formulaire avant soumission
+    $('#deleteRoleForm').submit(function (e) {
+        var actionUrl = $(this).attr('action');
+        if (!actionUrl) {
+            e.preventDefault();
+            alert("L'URL de suppression est vide !");
+        }
+    });
+</script>
 @endsection
-
-

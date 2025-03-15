@@ -15,8 +15,17 @@
                 </div>
             </div>
             @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
-            @endif
+    <div id="successMessage" class="alert alert-success">
+        {{ session('status') }}
+    </div>
+    <script>
+        // Faire disparaître le message après 2 secondes
+        setTimeout(function() {
+            document.getElementById('successMessage').style.display = 'none';
+        }, 2000);
+    </script>
+@endif
+
         </div>
         <div class="row">
             <div class="col-sm-12">

@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use  App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
@@ -16,44 +14,50 @@ class UserRolePermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Permissions
-        Permission::create(['name' => 'view role']);
-        Permission::create(['name' => 'create role']);
-        Permission::create(['name' => 'update role']);
-        Permission::create(['name' => 'delete role']);
+        // Create or Update Permissions (évite les doublons)
+        Permission::firstOrCreate(['name' => 'view role']);
+        Permission::firstOrCreate(['name' => 'create role']);
+        Permission::firstOrCreate(['name' => 'update role']);
+        Permission::firstOrCreate(['name' => 'delete role']);
 
-        Permission::create(['name' => 'view permission']);
-        Permission::create(['name' => 'create permission']);
-        Permission::create(['name' => 'update permission']);
-        Permission::create(['name' => 'delete permission']);
+        Permission::firstOrCreate(['name' => 'view permission']);
+        Permission::firstOrCreate(['name' => 'create permission']);
+        Permission::firstOrCreate(['name' => 'update permission']);
+        Permission::firstOrCreate(['name' => 'delete permission']);
 
-        Permission::create(['name' => 'view user']);
-        Permission::create(['name' => 'create user']);
-        Permission::create(['name' => 'update user']);
-        Permission::create(['name' => 'delete user']);
+        Permission::firstOrCreate(['name' => 'view user']);
+        Permission::firstOrCreate(['name' => 'create user']);
+        Permission::firstOrCreate(['name' => 'update user']);
+        Permission::firstOrCreate(['name' => 'delete user']);
 
-        Permission::create(['name' => 'create project']);
-        Permission::create(['name' => 'update project']);
-        Permission::create(['name' => 'delete project']);
-    
-        // Create Roles
-        $adminRole = Role::create(['name' => 'admin']); //as admin
-        $superviseurRole = Role::create(['name' => 'superviseur']);
-        $employeeRole = Role::create(['name' => 'employee']);
-        
+        Permission::firstOrCreate(['name' => 'view project']); // Clé pour les employés
+        Permission::firstOrCreate(['name' => 'create project']);
+        Permission::firstOrCreate(['name' => 'update project']);
+        Permission::firstOrCreate(['name' => 'delete project']);
 
-        // Lets give all permission to admin role.
+        // Create or Update Roles
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $superviseurRole = Role::firstOrCreate(['name' => 'superviseur']);
+        $employeeRole = Role::firstOrCreate(['name' => 'employee']);
+
+        // Sync permissions to admin role (toutes les permissions)
         $allPermissionNames = Permission::pluck('name')->toArray();
+        $adminRole->syncPermissions($allPermissionNames);
 
-        $adminRole->givePermissionTo($allPermissionNames);
+        // Sync permissions to superviseur role
+        $superviseurRole->syncPermissions([
+            'view project',
+            'create project',
+            'update project',
+            'delete project',
+            'view user',
+        ]);
 
-        // Let's give few permissions to superviseur role.
-        $superviseurRole->givePermissionTo(['create project', 'view project', 'update project','delete project']);
-        $employeeRole->givePermissionTo(['create project', 'view project', 'update project','delete project']);
-        
+        // Sync permissions to employee role
+        $employeeRole->syncPermissions([
+            'view project', // Permission pour voir les projets
+        ]);
+
     
-        // Let's Create User and assign Role to it.
-
-
     }
 }

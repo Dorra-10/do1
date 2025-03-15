@@ -18,33 +18,45 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Routes accessibles uniquement aux super-admin ou admin
-Route::group(['middleware' => ['role:super-admin|admin']], function () {
+// Routes accessibles uniquement au admin
+Route::group(['middleware' => ['role:admin']], function () {
     // Permissions
     Route::resource('permissions', PermissionController::class);
-    Route::get('permissions/{permissionId}/delete', [PermissionController::class, 'destroy']);
+    Route::delete('permissions/{permissionId}/delete', [PermissionController::class, 'destroy'])->name('permissions.destroy');
 
     // Roles
     Route::resource('roles', RoleController::class);
-    Route::get('roles/{roleId}/delete', [RoleController::class, 'destroy']);
-    Route::get('roles/{roleId}/give-permissions', [RoleController::class, 'addPermissionToRole']);
-    Route::put('roles/{roleId}/give-permissions', [RoleController::class, 'givePermissionToRole']);
+    Route::delete('roles/{role}/delete', [RoleController::class, 'destroy'])->name('roles.destroy');
 
+    Route::get('roles/{roleId}/give-permissions', [RoleController::class, 'addPermissionToRole'])->name('roles.addPermission');
+    
     // Users
-    Route::get('/users', [UserController::class, 'index']);
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create'); 
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
-
-    // Projects
+    
+     // Définir les autres routes des projets
     Route::resource('projects', ProjectController::class);
-    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::resource('projects', ProjectController::class)->except(['index', 'store']);
+    
+     // Pour stocker un projet
     Route::post('/projects/store', [ProjectController::class, 'store'])->name('projects.store');
     Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
     Route::delete('/projects/{id}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+     
+});
+
+// Routes accessibles aux admin, superviseur et employé
+Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], function () {
+    // Route pour voir les projets
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::resource('users', UserController::class)->except(['show']);
    
+});
+Route::group(['middleware' => ['role:admin|superviseur']], function () {
+    Route::post('/projects/store', [ProjectController::class, 'store'])->name('projects.store');
+    Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
+    Route::delete('/projects/{id}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+    Route::resource('users', UserController::class)->except(['show']);
 
 });
+   
 
 require __DIR__.'/auth.php';
