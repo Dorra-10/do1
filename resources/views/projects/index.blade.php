@@ -11,28 +11,30 @@
                     <div class="mt-5">
                         <h4 class="card-title float-left mt-2">Projects</h4>
                         @can('update project')
-                        <a href="#" class="btn btn-primary float-right veiwbutton" data-toggle="modal" data-target="#addProjectModal">Create Project</a>
+                            <a href="#" class="btn btn-primary float-right veiwbutton" data-toggle="modal" data-target="#addProjectModal">Create Project</a>
                         @endcan
                     </div>
                 </div>
             </div>
             @if (session('status'))
-            <div id="successMessage" class="alert alert-success">{{ session('status') }}</div>
+                <div id="successMessage" class="alert alert-success">{{ session('status') }}</div>
             @endif
         </div>
         <!-- /Page Header -->
 
         <!-- Search Filter -->
-        <div class="row filter-row">
-            <div class="col-sm-12 col-md-9">
-                <div class="form-group form-focus">
-                    <input type="text" class="form-control floating">
-                    
-                </div>
+        <div class="row mb-3">
+            <div class="col-sm-12 col-md-6">
+                <form method="POST" action="{{ route('projects.index') }}" class="form-inline">
+                    @csrf
+                    <div class="input-group w-100">
+                        <input type="text" name="search" class="form-control" placeholder="Enter the project name" value="">
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-success">Search</button>
+                        </div>
+                    </div>
+                </form>
             </div>
-            <div class="col-sm-12 col-md-2">
-                <a href="#" class="btn btn-success btn-block">Search</a>  
-            </div>     
         </div>
         <!-- /Search Filter -->
 
@@ -41,7 +43,7 @@
                 <div class="card card-table">
                     <div class="card-body booking_card">
                         <div class="table-responsive">
-                            <table class="datatable table table-stripped table-hover table-center mb-0">
+                            <table class="datatable table table-striped table-hover table-center mb-0">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -52,39 +54,44 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($projects as $project)
-                                    <tr id="project-row-{{ $project->id }}">
-                                        <td>{{ $project->id }}</td>
-                                        <td><a href="#">{{ $project->name }}</a></td>
-                                        <td>{{ $project->type }}</td>
-                                        <td>{{ $project->date_added }}</td>
-                                        <td class="text-right">
-                                            <!-- Edit Button -->
-                                            @can('update project')
-                                            <a href="#" class="edit-project-btn" 
-                                               data-id="{{ $project->id }}" 
-                                               data-name="{{ $project->name }}" 
-                                               data-type="{{ $project->type }}" 
-                                               data-date_added="{{ $project->date_added }}" 
-                                               data-toggle="modal" 
-                                               data-target="#editProjectModal">
-                                                <i class="fas fa-pencil-alt m-r-5"></i> 
-                                            </a>
-                                            @endcan
-                                            @can('delete project')
-                                            <!-- Delete Button -->
-                                            <a href="#" class="delete-project-btn" 
-                                               data-id="{{ $project->id }}" 
-                                               data-toggle="modal" 
-                                               data-target="#delete_modal">
-                                                <i class="fas fa-trash-alt m-r-5"></i> 
-                                            </a>
-                                            @endcan
-                                        </td>
-                                    </tr>
-                                    @endforeach                               
+                                    @forelse ($projects as $project)
+                                        <tr id="project-row-{{ $project->id }}">
+                                            <td>{{ $project->id }}</td>
+                                            <td><a href="#">{{ $project->name }}</a></td>
+                                            <td>{{ $project->type }}</td>
+                                            <td>{{ $project->date_added }}</td>
+                                            <td class="text-right">
+                                                @can('update project')
+                                                    <a href="#" class="edit-project-btn" 
+                                                       data-id="{{ $project->id }}" 
+                                                       data-name="{{ $project->name }}" 
+                                                       data-type="{{ $project->type }}" 
+                                                       data-date_added="{{ $project->date_added }}" 
+                                                       data-toggle="modal" 
+                                                       data-target="#editProjectModal">
+                                                        <i class="fas fa-pencil-alt m-r-5"></i> 
+                                                    </a>
+                                                @endcan
+                                                @can('delete project')
+                                                    <a href="#" class="delete-project-btn" 
+                                                       data-id="{{ $project->id }}" 
+                                                       data-toggle="modal" 
+                                                       data-target="#delete_modal">
+                                                        <i class="fas fa-trash-alt m-r-5"></i> 
+                                                    </a>
+                                                @endcan
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5">Aucun projet trouvé</td>
+                                        </tr>
+                                    @endforelse
                                 </tbody>
                             </table>
+                            <div class="d-flex justify-content-center">
+                                {{ $projects->links() }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -143,7 +150,7 @@
                             <span aria-hidden="true">×</span>
                         </button>
                     </div>
-                    <form id="editProjectForm" method="POST" action="{{ route('projects.update', ':id') }}">
+                    <form id="editProjectForm" method="POST" action="">
                         @csrf
                         @method('PUT')
                         <div class="modal-body">
@@ -189,7 +196,7 @@
                         <p>Are you sure you want to delete this project?</p>
                     </div>
                     <div class="modal-footer">
-                        <form id="deleteForm" method="POST" action="{{ route('projects.destroy', ':id') }}">
+                        <form id="deleteForm" method="POST" action="">
                             @csrf
                             @method('DELETE')
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -208,9 +215,9 @@
         if ($('#successMessage').length) {
             setTimeout(function() {
                 $('#successMessage').fadeOut('slow', function() {
-                    $(this).remove(); // Supprime complètement l'élément après le fadeOut
+                    $(this).remove();
                 });
-            }, 2000); // 2000 ms = 2 secondes
+            }, 2000);
         }
 
         // Edit button click event
@@ -220,8 +227,8 @@
             const projectType = $(this).data('type');
             const projectDate = $(this).data('date_added');
 
-            // Set the values in the edit modal
-            $('#editProjectForm').attr('action', '/projects/' + projectId);
+            // Mettre à jour l'action du formulaire dynamiquement
+            $('#editProjectForm').attr('action', '{{ route("projects.update", "") }}'.replace('', projectId));
             $('#editName').val(projectName);
             $('#editType').val(projectType);
             $('#editDate').val(projectDate);
@@ -230,7 +237,7 @@
         // Delete button click event
         $('.delete-project-btn').click(function() {
             const projectId = $(this).data('id');
-            $('#deleteForm').attr('action', '/projects/' + projectId);
+            $('#deleteForm').attr('action', '{{ route("projects.destroy", "") }}'.replace('', projectId));
         });
     });
 </script>

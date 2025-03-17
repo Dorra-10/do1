@@ -28,12 +28,14 @@
 						</div>
 						<div class="form-group">
 							<label>Roles <span class="text-danger">*</span></label>
-							<select name="roles[]" class="form-control" multiple required>
-								@foreach ($roles as $role)
-									<option value="{{ $role }}">{{ $role }}</option>
-								@endforeach
-							</select>
+								<select name="roles[]" class="form-control" id="roles-select" required>
+									<option value="" disabled selected>Select a role</option>
+									@foreach ($roles as $role)
+										<option value="{{ $role }}">{{ $role }}</option>
+									@endforeach
+							    </select>
 						</div>
+
 						<div class="m-t-20">
 							<button class="btn btn-primary submit-btn">Create User</button>
 						</div>

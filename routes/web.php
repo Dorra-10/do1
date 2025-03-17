@@ -31,7 +31,7 @@ Route::group(['middleware' => ['role:admin']], function () {
     Route::get('roles/{roleId}/give-permissions', [RoleController::class, 'addPermissionToRole'])->name('roles.addPermission');
     
     // Users
-    
+   
      // Définir les autres routes des projets
     Route::resource('projects', ProjectController::class);
     Route::resource('projects', ProjectController::class)->except(['index', 'store']);
@@ -46,8 +46,10 @@ Route::group(['middleware' => ['role:admin']], function () {
 // Routes accessibles aux admin, superviseur et employé
 Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], function () {
     // Route pour voir les projets
-    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::match(['get', 'post'], '/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::resource('users', UserController::class)->except(['show']);
+    Route::match(['get', 'post'], '/users', [UserController::class, 'index'])->name('role-permission.user.index');
+    Route::match(['get', 'post'], '/projects', [ProjectController::class, 'index'])->name('projects.index');
    
 });
 Route::group(['middleware' => ['role:admin|superviseur']], function () {

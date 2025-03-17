@@ -6,14 +6,23 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
-    public function index()
-    {
-        $users = User::get();
-        return view('role-permission.user.index', ['users' => $users]);
-    }
+    public function index(Request $request)
+{
+    // Récupérer la valeur de la recherche
+    $search = $request->input('search');
+
+    // Filtrer les utilisateurs en fonction du nom si un terme de recherche est fourni
+    $users = User::when($search, function($query, $search) {
+        return $query->where('name', 'like', "%{$search}%");
+    })->paginate(10); // Pagination si nécessaire
+
+    return view('role-permission.user.index', compact('users'));
+}
+
 
     public function create()
     {

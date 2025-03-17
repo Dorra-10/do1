@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
-
+use Illuminate\Support\Facades\Log;
 class ProjectController extends Controller
 {
     
@@ -37,14 +37,21 @@ class ProjectController extends Controller
 
 
     // Méthode pour afficher tous les projets
-    public function index()
+    public function index(Request $request)
     {
-        // Récupérer tous les projets, ou vous pouvez ajouter une pagination pour de meilleures performances
-        $projects = Project::paginate(10); // Utilisation de la pagination pour éviter des chargements lourds si vous avez beaucoup de projets
+        $query = Project::query();
+
+        // Filtrer uniquement sur POST avec une recherche
+        if ($request->isMethod('post') && $request->has('search')) {
+            $search = $request->input('search');
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+
+        $projects = $query->paginate(10);
 
         return view('projects.index', compact('projects'));
     }
-
+    
     // Méthode pour mettre à jour un projet
     public function update(Request $request, Project $project)
     {
@@ -88,6 +95,20 @@ public function destroy($id)
     }
 
 }
+public function search(Request $request)
+    {
+        $search = $request->query('search');
+
+        // Filtrer les projets par nom si une recherche est saisie
+        if ($search) {
+            $projects = Project::where('name', 'like', '%' . $search . '%')->get();
+        } else {
+            $projects = Project::all(); // Afficher tous les projets si pas de recherche
+        }
+
+        // Retourner la vue avec les projets
+        return view('projects.index', compact('projects')); // Ajustez 'projects.index' selon votre vue
+    }
 
 
 }

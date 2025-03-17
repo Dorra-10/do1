@@ -13,7 +13,7 @@
                         @endcan
                     </div>
                 </div>
-            </div>
+            </div> 
             @if (session('status'))
     <div id="successMessage" class="alert alert-success">
         {{ session('status') }}
@@ -25,7 +25,18 @@
         }, 2000);
     </script>
 @endif
-
+<div class="row mb-3">
+<div class="col-sm-12 col-md-6">
+<form method="GET" action="{{ route('role-permission.user.index') }}" class="form-inline">
+    <div class="input-group w-100">
+        <input type="text" name="search" class="form-control" placeholder="Enter the user name" value="{{ request('search') }}">
+        <div class="input-group-append">
+            <button type="submit" class="btn btn-success">Search</button>
+        </div>
+    </div>
+</form>
+</div>
+</div>
         </div>
         <div class="row">
             <div class="col-sm-12">
@@ -43,7 +54,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($users as $user)
+                                    @forelse($users as $user)
                                     <tr id="user-row-{{ $user->id }}">
                                         <td>{{ $user->id }}</td>
                                         <td>{{ $user->name }}</td>
@@ -66,9 +77,16 @@
                                             @endcan  
                                         </td>
                                     </tr>
-                                    @endforeach                               
+                                    @empty
+                                        <tr>
+                                            <td colspan="5">Aucun utilisateur trouvé</td>
+                                        </tr>
+                                    @endforelse                              
                                 </tbody>
                             </table>
+                            <div class="d-flex justify-content-center">
+                                {{ $users->links() }}
+                            </div>
                         </div>
                     </div>
                 </div>
