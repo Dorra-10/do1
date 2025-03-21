@@ -109,7 +109,16 @@ public function search(Request $request)
         // Retourner la vue avec les projets
         return view('projects.index', compact('projects')); // Ajustez 'projects.index' selon votre vue
     }
-
-
+    public function showDocuments($projectId)
+    {
+        // Récupérer le projet par son ID
+        $project = Project::findOrFail($projectId);
+    
+        // Récupérer les documents associés au projet
+        $documents = $project->documents; // Assurez-vous que la relation 'documents' est définie dans le modèle Project
+    
+        // Retourner la vue avec les documents du projet
+        return view('projects.documents', compact('project', 'documents'));
+    }
 }
 

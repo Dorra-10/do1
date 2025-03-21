@@ -35,6 +35,11 @@ class UserRolePermissionSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'update project']);
         Permission::firstOrCreate(['name' => 'delete project']);
 
+        Permission::firstOrCreate(['name' => 'view document']); // Clé pour les employés
+        Permission::firstOrCreate(['name' => 'create document']);
+        Permission::firstOrCreate(['name' => 'update document']);
+        Permission::firstOrCreate(['name' => 'delete document ']);
+
         // Create or Update Roles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $superviseurRole = Role::firstOrCreate(['name' => 'superviseur']);

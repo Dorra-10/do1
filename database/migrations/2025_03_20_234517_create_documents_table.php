@@ -13,8 +13,13 @@ return new class extends Migration
     {
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->enum('type', ['pdf', 'word', 'ppt', 'excel', 'catia']);
+            $table->foreignId('project_id')->constrained()->onDelete('cascade');
+            $table->date('date_added');
             $table->timestamps();
         });
+        
     }
 
     /**

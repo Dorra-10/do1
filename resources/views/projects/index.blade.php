@@ -10,7 +10,7 @@
                 <div class="col">
                     <div class="mt-5">
                         <h4 class="card-title float-left mt-2">Projects</h4>
-                        @can('update project')
+                        @can('create project')
                             <a href="#" class="btn btn-primary float-right veiwbutton" data-toggle="modal" data-target="#addProjectModal">Create Project</a>
                         @endcan
                     </div>
@@ -57,12 +57,12 @@
                                     @forelse ($projects as $project)
                                         <tr id="project-row-{{ $project->id }}">
                                             <td>{{ $project->id }}</td>
-                                            <td><a href="#">{{ $project->name }}</a></td>
+                                            <td><a href="{{ route('projects.documents', $project->id) }}">{{ $project->name }}</a></td>
                                             <td>{{ $project->type }}</td>
                                             <td>{{ $project->date_added }}</td>
                                             <td class="text-right">
                                                 @can('update project')
-                                                    <a href="#" class="edit-project-btn" 
+                                                    <a href="{{ url('/project/' . $project->id) }}" class="edit-project-btn" 
                                                        data-id="{{ $project->id }}" 
                                                        data-name="{{ $project->name }}" 
                                                        data-type="{{ $project->type }}" 
@@ -184,26 +184,24 @@
 
         <!-- Delete Project Modal -->
         <div class="modal fade" id="delete_modal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">×</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Are you sure you want to delete this project?</p>
-                    </div>
-                    <div class="modal-footer">
-                        <form id="deleteForm" method="POST" action="">
-                            @csrf
-                            @method('DELETE')
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-danger">Delete</button>
-                        </form>
-                    </div>
-                </div>
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this document?</p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="POST" action="">
+                    @csrf
+                    @method('DELETE')
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
             </div>
         </div>
     </div>
@@ -220,25 +218,13 @@
             }, 2000);
         }
 
-        // Edit button click event
-        $('.edit-project-btn').click(function() {
-            const projectId = $(this).data('id');
-            const projectName = $(this).data('name');
-            const projectType = $(this).data('type');
-            const projectDate = $(this).data('date_added');
-
-            // Mettre à jour l'action du formulaire dynamiquement
-            $('#editProjectForm').attr('action', '{{ route("projects.update", "") }}'.replace('', projectId));
-            $('#editName').val(projectName);
-            $('#editType').val(projectType);
-            $('#editDate').val(projectDate);
-        });
-
         // Delete button click event
-        $('.delete-project-btn').click(function() {
-            const projectId = $(this).data('id');
-            $('#deleteForm').attr('action', '{{ route("projects.destroy", "") }}'.replace('', projectId));
+        $('.delete-document-btn').click(function() {
+            const documentId = $(this).data('id');
+            // Mettre à jour l'action du formulaire de suppression dynamiquement
+            $('#deleteForm').attr('action', '{{ route("documents.destroy", ":id") }}'.replace(':id', documentId));
         });
     });
 </script>
+
 @endsection

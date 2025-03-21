@@ -9,11 +9,12 @@
                             <i class="fas fa-folder"></i> <span>Projects</span>
                         </a>
                     </li>
-                    <li class="submenu">
-                        <a href="#" class="nav-link"><i class="fas fa-file-alt"></i>
-                        <span>Documents</span>
+                    <li >
+                        <a href="{{ route('documents.index') }}" class="nav-link">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Documents</span>
                         </a>
-                    </li> 
+                    </li>  
                     <li class="submenu">
                         <a href="#" class="nav-link">
                             <i class="fas fa-history"></i> 
@@ -27,9 +28,10 @@
                             <i class="fas fa-folder"></i> <span>Projects</span>
                         </a>
                     </li>
-                    <li class="submenu">
-                        <a href="#" class="nav-link"><i class="fas fa-file-alt"></i>
-                        <span>Documents</span>
+                    <li >
+                        <a href="{{ route('documents.index') }}" class="nav-link">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Documents</span>
                         </a>
                     </li> 
                     <li class="submenu">
@@ -54,9 +56,10 @@
                         </a>
                     </li>
                     <li class="list-divider"></li>
-                    <li class="submenu">
-                        <a href="#" class="nav-link"><i class="fas fa-file-alt"></i>
-                        <span>Documents</span>
+                    <li >
+                        <a href="{{ route('documents.index') }}" class="nav-link">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Documents</span>
                         </a>
                     </li> 
                     <li class="submenu">
