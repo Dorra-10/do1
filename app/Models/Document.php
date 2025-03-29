@@ -9,11 +9,11 @@ class Document extends Model
 {
     use HasFactory;
 
-    // Ajoutez les champs que vous souhaitez pouvoir affecter par la méthode de création ou d'assignation de masse
-    protected $fillable = ['name','type','project_id','access','date_added',];
+    protected $fillable = ['name', 'file_type', 'project_id', 'path', 'date_added', 'access'];
+    
     public function project()
     {
         return $this->belongsTo(Project::class);
     }
-
 }
+

@@ -33,7 +33,11 @@
                                 @foreach($documents as $document)
                                 <tr>
                                     <td>{{ $document->id }}</td>
-                                    <td>{{ $document->name }}</td>
+                                    <td>
+                                        <a href="{{ route('documents.show', $document->id) }}" target="_blank">
+                                            {{ $document->name }}
+                                        </a>
+                                    </td>
                                     <td>{{ $document->type }}</td>
                                     <td>{{ $document->acces }}</td>
                                     <td>{{ $document->date_added }}</td>

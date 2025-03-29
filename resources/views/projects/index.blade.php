@@ -62,7 +62,7 @@
                                             <td>{{ $project->date_added }}</td>
                                             <td class="text-right">
                                                 @can('update project')
-                                                    <a href="{{ url('/project/' . $project->id) }}" class="edit-project-btn" 
+                                                    <a href="#" class="edit-project-btn" 
                                                        data-id="{{ $project->id }}" 
                                                        data-name="{{ $project->name }}" 
                                                        data-type="{{ $project->type }}" 
@@ -150,13 +150,13 @@
                             <span aria-hidden="true">×</span>
                         </button>
                     </div>
-                    <form id="editProjectForm" method="POST" action="">
+                    <form id="editProjectForm" method="POST" action="{{ route('projects.update', $project->id) }}">
                         @csrf
                         @method('PUT')
                         <div class="modal-body">
                             <div class="form-group">
                                 <label for="editName">Project Name</label>
-                                <input type="text" class="form-control" id="editName" name="name" required>
+                                <input type="text" class="form-control" id="editName" name="name"  required>
                             </div>
                             <div class="form-group">
                                 <label for="editType">Type</label>
@@ -196,7 +196,7 @@
                 <p>Are you sure you want to delete this document?</p>
             </div>
             <div class="modal-footer">
-                <form id="deleteForm" method="POST" action="">
+                <form id="deleteForm" method="POST" action="{{ route('projects.destroy', $project->id) }}">
                     @csrf
                     @method('DELETE')
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -226,5 +226,33 @@
         });
     });
 </script>
+
+
+<script>
+$(document).ready(function() {
+    // Lorsque vous cliquez sur le lien d'édition d'un projet
+    $('.edit-project-btn').click(function() {
+        // Récupérer les données du projet depuis les attributs 'data'
+        const projectId = $(this).data('id');
+        const name = $(this).data('name');
+        const type = $(this).data('type');
+        const dateAdded = $(this).data('date_added');
+
+        // Mettre à jour l'action du formulaire avec l'ID du projet
+        const editUrl = '{{ route("projects.update", ":id") }}'.replace(':id', projectId);
+        $('#editProjectForm').attr('action', editUrl);
+
+        // Remplir les champs du formulaire avec les données du projet
+        $('#editName').val(name);
+        $('#editType').val(type);
+        
+        $('#editDate').val(dateAdded);
+
+        // Afficher la modal
+        $('#editProjectModal').modal('show');
+    });
+});
+</script>
+
 
 @endsection

@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Access storage files (allow access to files in storage)
+    RewriteRule ^storage/(.*)$ storage/$1 [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -22,4 +25,17 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
+    # Handling file downloads and prevent automatic download
+    # For PDF, DOC, DOCX, XLSX, PPT, PPTX files, open in the browser
+    <IfModule mod_mime.c>
+        AddType application/pdf .pdf
+        AddType application/msword .doc
+        AddType application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx
+        AddType application/vnd.ms-excel .xls
+        AddType application/vnd.openxmlformats-officedocument.spreadsheetml.sheet .xlsx
+        AddType application/vnd.ms-powerpoint .ppt
+        AddType application/vnd.openxmlformats-officedocument.presentationml.presentation .pptx
+    </IfModule>
+
 </IfModule>

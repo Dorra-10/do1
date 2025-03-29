@@ -14,13 +14,15 @@ return new class extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->enum('type', ['pdf', 'word', 'ppt', 'excel', 'catia']);
+            $table->string('file_type');
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
-            $table->date('date_added');
+            $table->string('file');
+            $table->timestamp('date_added')->useCurrent(); // Utilise la date et l'heure actuelle par défaut
+            $table->string('access')->nullable(); // Le champ "access" est nullable
             $table->timestamps();
         });
-        
     }
+    
 
     /**
      * Reverse the migrations.
