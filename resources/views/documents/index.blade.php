@@ -8,7 +8,9 @@
                 <div class="col">
                     <div class="mt-5">
                         <h4 class="card-title float-left mt-2">Documents</h4> 
+                       
                         <a href="{{ route('documents.upload') }}" class="btn btn-primary float-right" data-toggle="modal" data-target="#addDocumentModal">Add Document</a>
+                        
                     </div>
                 </div>
             </div>
@@ -44,6 +46,7 @@
                                     <td>{{ $document->access }}</td>
                                     <td>{{ $document->date_added }}</td>
                                     <td class="text-right">
+                                    @can('update document')
                                         <a href="#" class="edit-document-btn" data-id="{{ $document->id }}"
                                            data-name="{{ $document->name }}"
                                            data-file_type="{{ $document->file_type }}"
@@ -53,13 +56,14 @@
                                            data-toggle="modal" data-target="#editDocumentModal">
                                            <i class="fas fa-pencil-alt m-r-5"></i>
                                         </a>
-                                        @can('delete project')
+                                        @endcan('update document')
+                                        @can('delete document')
                                         <a href="#" class="delete-document-btn" data-id="{{ $document->id }}" data-toggle="modal" data-target="#delete_modal">
                                             <i class="fas fa-trash-alt m-r-5"></i>
                                         </a>
                                         @endcan
                                         <a href="{{ route('documents.revision', $document->id) }}" class="revision-document-btn" data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
-                                            <i class="fas fa-edit m-r-5"></i> Révision
+                                            <i class="fas fa-edit m-r-5"></i> 
                                         </a>
                                     </td>
                                 </tr>
@@ -85,7 +89,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addDocumentModalLabel">Ajouter un Document</h5>
+                <h5 class="modal-title" id="addDocumentModalLabel">Add Document</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -99,9 +103,9 @@
                                 <label for="docName">Document Name</label>
                                 <input type="text" class="form-control" id="docName" name="name" required>
                             </div>
-                        <label for="project_id">Sélectionner un Projet</label>
+                        <label for="project_id">Select Project</label>
                         <select class="form-control" id="project_id" name="project_id" required>
-                            <option value="">Choisir un projet</option>
+                            <option value="">Select Project</option>
                             @foreach($projects as $project)
                                 <option value="{{ $project->id }}">{{ $project->name }}</option>
                             @endforeach
@@ -115,15 +119,15 @@
                             <option value="docx">docx</option>
                             <option value="ppt">ppt</option>
                             <option value="excel">excel</option>
-                            <option value="catia">actia</option>
+                            <option value="catia">catia</option>
                         </select>
                     </div>
                      <!-- Access Information -->
                     <div class="form-group">
-                        <label for="access">Accès</label>
+                        <label for="access">Acces</label>
                         <select class="form-control" id="access" name="access">
-                            <option value="read">Lecture seule</option>
-                            <option value="read and write">Lecture et écriture</option>
+                            <option value="read">Read</option>
+                            <option value="read and write">Read And Write</option>
                         </select>
                     </div>
                     <!-- Date Added -->
@@ -133,7 +137,7 @@
                     </div>
                     <!-- File Upload -->
                     <div class="form-group">
-                        <label for="document">Télécharger un Document</label>
+                        <label for="document">Upload Document</label>
                         <input type="file" class="form-control" id="document" name="document" required>
                     </div>
                        
@@ -141,8 +145,8 @@
                     
             
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Ajouter Document</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Document</button>
                 </div>
                 </div>
             </form>
@@ -241,7 +245,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="revisionModalLabel">Réviser le fichier</h5>
+                <h5 class="modal-title" id="revisionModalLabel">Edit Content</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -252,7 +256,7 @@
                     <form action="{{ route('documents.revision', $document->id) }}" method="POST" enctype="multipart/form-data" id="uploadForm">
                         @csrf
                         <div class="form-group">
-                            <label for="file">Choisir un fichier</label>
+                            <label for="file">Choose file</label>
                             <input type="file" name="file" id="file" class="form-control" required>
                         </div>
                         <button type="submit" class="btn btn-success">Submit</button>

@@ -13,4 +13,8 @@ class Project extends Model
     {
         return $this->hasMany(Document::class); 
     }
+    public function accesses()
+    {
+        return $this->hasMany(Access::class);
+    }
 }

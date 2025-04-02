@@ -15,5 +15,9 @@ class Document extends Model
     {
         return $this->belongsTo(Project::class);
     }
+    public function accesses()
+    {
+        return $this->hasMany(Access::class);
+    }
 }
 

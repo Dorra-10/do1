@@ -32,10 +32,17 @@
                         <div class="input-group-append">
                             <button type="submit" class="btn btn-success">Search</button>
                         </div>
+                        
                     </div>
                 </form>
             </div>
         </div>
+        @if(isset($message))
+    <div class="alert alert-warning mt-3">
+        {{ $message }}
+    </div>
+@endif
+
         <!-- /Search Filter -->
 
         <div class="row">
@@ -76,7 +83,7 @@
                                                     <a href="#" class="delete-project-btn" 
                                                        data-id="{{ $project->id }}" 
                                                        data-toggle="modal" 
-                                                       data-target="#delete_modal">
+                                                       data-target="#delete_modal_{{ $project->id }}">
                                                         <i class="fas fa-trash-alt m-r-5"></i> 
                                                     </a>
                                                 @endcan
@@ -150,7 +157,12 @@
                             <span aria-hidden="true">×</span>
                         </button>
                     </div>
-                    <form id="editProjectForm" method="POST" action="{{ route('projects.update', $project->id) }}">
+                    @if(isset($project))
+                        <form id="editProjectForm" method="POST" action="{{ route('projects.update', $project->id) }}">
+                    @else
+                        <form id="editProjectForm" method="POST" action="#">
+                    @endif
+
                         @csrf
                         @method('PUT')
                         <div class="modal-body">
@@ -183,29 +195,35 @@
         </div>
 
         <!-- Delete Project Modal -->
-        <div class="modal fade" id="delete_modal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">×</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this document?</p>
-            </div>
-            <div class="modal-footer">
-                <form id="deleteForm" method="POST" action="{{ route('projects.destroy', $project->id) }}">
-                    @csrf
-                    @method('DELETE')
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
+        @foreach($projects as $project)
+    <!-- Modal de confirmation de suppression -->
+    <div class="modal fade" id="delete_modal_{{ $project->id }}" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the project "{{ $project->name }}"?</p>
+                </div>
+                <div class="modal-footer">
+                    <form method="POST" action="{{ route('projects.destroy', $project->id) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    
+@endforeach
+
 
 <script>
     $(document).ready(function() {

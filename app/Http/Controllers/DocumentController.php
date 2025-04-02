@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Document;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 
 class DocumentController extends Controller
@@ -69,6 +71,7 @@ class DocumentController extends Controller
         // Téléchargement du fichier avec son nom et son extension
         return response()->download($filePath, $document->name . '.' . $document->file_type);
     }
+    
     public function update(Request $request, Document $document)
     {
         // Validation des données du formulaire
@@ -110,75 +113,86 @@ class DocumentController extends Controller
     
     
 
-    // 🛠️ Révision (remplacement d'un fichier)
+    //  Révision (remplacement d'un fichier)
     public function revision(Request $request, $id)
     {
         DB::beginTransaction();
-        
+    
         try {
             $document = Document::findOrFail($id);
             
+            // Sauvegarder le chemin de l'ancien fichier
+            $oldPath = $document->path;
+    
             // Valider le nouveau fichier
             $request->validate([
                 'file' => 'required|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr|max:20480',
             ]);
     
             $file = $request->file('file');
-            $originalName = $file->getClientOriginalName();
             $extension = $file->getClientOriginalExtension();
     
-            // Générer un nouveau nom unique avec préfixe
-            $newFileName = 'rev_'.$id.'_'.time().'.'.$extension;
-            $newStoragePath = 'documents/'.$newFileName;
+            // Conserver le même nom de fichier
+            $newStoragePath = 'documents/' . pathinfo($oldPath, PATHINFO_FILENAME) . '.' . $extension;
     
-            // 1. Enregistrer le NOUVEAU fichier d'abord
-            Storage::disk('public')->put(
-                $newStoragePath, 
-                file_get_contents($file->getRealPath())
-            );
+            // Supprimer l'ancien fichier s'il existe
+            if ($oldPath && Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
     
-            // 2. Mettre à jour la base de données
+            // Enregistrer le NOUVEAU fichier avec le même nom
+            Storage::disk('public')->put($newStoragePath, file_get_contents($file->getRealPath()));
+    
+            // Mettre à jour la base de données
             $document->update([
                 'path' => $newStoragePath,
-                'name' => $originalName,
+                'name' => $file->getClientOriginalName(),
                 'file_type' => $extension,
-                'updated_at' => now() // Force la mise à jour du timestamp
+                'updated_at' => now(),
             ]);
-    
-            // 3. Supprimer l'ANCIEN fichier après succès
-            if ($document->getOriginal('path') !== $newStoragePath) {
-                Storage::disk('public')->delete($document->getOriginal('path'));
-            }
     
             DB::commit();
     
-            // Nettoyer les caches
+            // Nettoyer le cache du fichier
             clearstatcache();
             if (function_exists('opcache_reset')) {
                 opcache_reset();
             }
     
-            return redirect()->back()
-                   ->with('success', 'Fichier mis à jour avec succès.');
+            return redirect()->back()->with('success', 'Fichier mis à jour avec succès.');
     
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()
-                   ->with('error', 'Échec de la mise à jour: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Échec de la mise à jour: ' . $e->getMessage());
         }
     }
     
+    
+    
+    
+    
+    
     // 🗑️ Suppression d'un document
     public function destroy($id)
-    {
-        $document = Document::findOrFail($id);
+{
+    $document = Document::findOrFail($id);
 
-        // Supprimer le fichier s'il existe
-        if (Storage::disk('public')->exists($document->path)) {
-            Storage::disk('public')->delete($document->path);
-        }
+    // Vérifier et supprimer le fichier
+    $filePath = storage_path('app/public/' . $document->path);
 
-        $document->delete();
-        return redirect()->route('documents.index')->with('status', 'Document supprimé avec succès !');
+    if (file_exists($filePath)) {
+        unlink($filePath);
+    } elseif (Storage::disk('public')->exists($document->path)) {
+        Storage::disk('public')->delete($document->path);
     }
+
+    // Supprimer l'entrée de la base de données
+    $document->delete();
+
+    return redirect()->route('documents.index')->with('status', 'Document supprimé avec succès !');
+}
+
+
+
+    
 }
