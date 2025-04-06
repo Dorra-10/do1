@@ -21,7 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::resource('documents', DocumentController::class);
     Route::resource('documents', DocumentController::class)->except(['index', 'store']);
-    Route::get('/documents/{document}/edit', [DocumentController::class, 'edit'])->name('documents.edit');
+    
 
     Route::post('/documents/store', [DocumentController::class, 'store'])->name('documents.store');
     Route::get('projects/{project}/documents', [ProjectController::class, 'showDocuments'])->name('projects.documents');
@@ -35,7 +35,7 @@ Route::middleware('auth')->group(function () {
    
 
     Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
-    Route::post('documents/{id}/revision', [DocumentController::class, 'revision'])->name('documents.revision');
+    
     
 
 
@@ -74,6 +74,16 @@ Route::group(['middleware' => ['role:admin']], function () {
     Route::get('/give-access', [AccessController::class, 'giveAccessForm'])->name('giveAccessForm');  // Pour afficher le formulaire
     Route::post('/give-access', [AccessController::class, 'giveAccess'])->name('giveAccess');  // Pour traiter le formulaire
     Route::get('/get-documents/{projectId}', [AccessController::class, 'getDocumentsByProject'])->name('getDocumentsByProject');
+    Route::get('/projects/{projectId}/documents', [ProjectController::class, 'getDocumentsByProject']);
+
+
+
+    Route::delete('/access/delete', [AccessController::class, 'deleteAccess'])->name('access.delete');
+    Route::get('/edit-access/{permissionId}', [AccessController::class, 'editAccessForm']);
+
+    Route::put('/access/update', [AccessController::class, 'update'])->name('access.update');
+
+    
     
 });
 
@@ -82,14 +92,19 @@ Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], func
     // Route pour voir les projets
     Route::match(['get', 'post'], '/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
-    Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
     Route::post('documents/{id}/revision', [DocumentController::class, 'revision'])->name('documents.revision');
+    Route::get('document/{id}/view', [DocumentController::class, 'view'])->name('documents.view');
+    Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
+   
     
 });
 Route::group(['middleware' => ['role:admin|superviseur']], function () {
     Route::post('/projects/store', [ProjectController::class, 'store'])->name('projects.store');
     Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
     Route::resource('users', UserController::class)->except(['show']);
+    
+    
+
 
 });
    

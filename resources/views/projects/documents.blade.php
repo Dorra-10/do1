@@ -35,15 +35,16 @@
                                 <tr>
                                     <td>{{ $document->id }}</td>
                                     <td>
-                                        <a href="{{ route('documents.download', $document->id) }}" target="_blank">
                                             {{ $document->name }}
-                                        </a>
+                                        
                                     </td>
                                     <td>{{ $document->file_type }}</td>
                                    
                                     <td>{{ $document->access }}</td>
                                     <td>{{ $document->date_added }}</td>
+                                    
                                     <td class="text-right">
+                                    @can('update document')
                                         <a href="#" class="edit-document-btn" data-id="{{ $document->id }}"
                                            data-name="{{ $document->name }}"
                                            data-file_type="{{ $document->file_type }}"
@@ -53,15 +54,50 @@
                                            data-toggle="modal" data-target="#editDocumentModal">
                                            <i class="fas fa-pencil-alt m-r-5"></i>
                                         </a>
+                                        @endcan('update document')
                                         @can('delete project')
                                         <a href="#" class="delete-document-btn" data-id="{{ $document->id }}" data-toggle="modal" data-target="#delete_modal">
                                             <i class="fas fa-trash-alt m-r-5"></i>
                                         </a>
                                         @endcan
-                                        <a href="{{ route('documents.revision', $document->id) }}" class="revision-document-btn" data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
-                                            <i class="fas fa-edit m-r-5"></i>
+                                        @php
+                                        $user = auth()->user();
+                                        
+                                        // Vérification si l'utilisateur a un accès en écriture (write) sur ce document
+                                        $hasWriteAccess = $document->accesses
+                                            ->where('user_id', $user->id)
+                                            ->where('permission', 'write')
+                                            ->isNotEmpty();
+
+                                        // Vérification si l'utilisateur a un accès en lecture (read) sur ce document
+                                        $hasReadAccess = $document->accesses
+                                            ->where('user_id', $user->id)
+                                            ->where('permission', 'read')
+                                            ->isNotEmpty();
+                                    @endphp
+
+                                    {{-- Icône de téléchargement - visible uniquement si admin/superviseur ou write --}}
+                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
+                                        <a href="{{ route('documents.download', $document->id) }}" class="download-document-btn">
+                                            <i class="fas fa-download m-r-5"></i> 
                                         </a>
-                                    </td>
+                                    @endif
+
+                                    {{-- Icône de révision - visible uniquement si admin/superviseur ou write --}}
+                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
+                                        <a href="{{ route('documents.revision', $document->id) }}" class="revision-document-btn" 
+                                        data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
+                                            <i class="fas fa-edit m-r-5"></i> 
+                                        </a>
+                                    @endif
+
+                                    {{-- Icône de visualisation - visible uniquement si admin/superviseur ou read --}}
+                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasReadAccess)
+                                        <a href="{{ route('documents.view', $document->id) }}" class="view-document-btn">
+                                            <i class="fas fa-eye m-r-5"></i> 
+                                        </a>
+                                    @endif
+                                
                                 </tr>
                                 @endforeach
                                 @if($documents->isEmpty())
@@ -247,17 +283,16 @@
                 </button>
             </div>
             <div class="modal-body">
-                <!-- Formulaire d'upload -->
-                @if(isset($document))
-                    <form action="{{ route('documents.revision', $document->id) }}" method="POST" enctype="multipart/form-data" id="uploadForm">
-                        @csrf
-                        <div class="form-group">
-                            <label for="file">Choose file</label>
-                            <input type="file" name="file" id="file" class="form-control" required>
-                        </div>
-                        <button type="submit" class="btn btn-success">Submit</button>
-                    </form>
-                @endif
+                <form action="" method="POST" enctype="multipart/form-data" id="revisionForm">
+                    @csrf
+                    <div class="form-group">
+                        <label for="file">Choose file</label>
+                        <input type="file" name="file" id="file" class="form-control" required accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.catpart,.catproduct,.cgr">
+                        <div id="fileError" class="text-danger"></div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Submit</button>
+                    <div id="loading" style="display: none;">Uploading...</div>
+                </form>
             </div>
         </div>
     </div>
@@ -281,6 +316,37 @@
             $('#deleteForm').attr('action', '/documents/' + docId);
         });
     });
+    $('.revision-document-btn').click(function() {
+            let documentId = $(this).data('id');
+            console.log("ID du document : " + documentId);
+            $('#revisionForm').attr('action', '/documents/revision/' + documentId); // Set correct action
+            $('#revisionModal').modal('show');
+        });
+
+        // AJAX request for document revision
+        $('#revisionForm').submit(function(e) {
+            e.preventDefault();
+            let formData = new FormData(this);
+            let documentId = $('#revisionForm').attr('action').split('/').pop();
+            
+            $.ajax({
+                url: '/documents/' + documentId + '/revision', 
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    console.log("Document mis à jour avec succès");
+                    $('#revisionModal').modal('hide');
+                    location.reload(); // Reload the page to show updated content
+                },
+                error: function(xhr, status, error) {
+                    console.log("Erreur lors de la mise à jour du document");
+                    $('#fileError').text("Erreur de mise à jour du document.");
+                }
+            });
+        });
+
 </script>
 
 @endsection

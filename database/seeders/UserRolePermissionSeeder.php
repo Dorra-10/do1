@@ -43,7 +43,7 @@ class UserRolePermissionSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'view Access']); // Clé pour les employés
         Permission::firstOrCreate(['name' => 'Give Access']);
         Permission::firstOrCreate(['name' => 'update Access']);
-        Permission::firstOrCreate(['name' => 'delete Access ']);
+        Permission::firstOrCreate(['name' => 'delete Access', 'guard_name' => 'web']);
 
         // Create or Update Roles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
@@ -61,6 +61,11 @@ class UserRolePermissionSeeder extends Seeder
             'update project',
             'delete project',
             'view user',
+            'view document',
+            'upload document',
+            'update document',
+
+
         ]);
 
         // Sync permissions to employee role

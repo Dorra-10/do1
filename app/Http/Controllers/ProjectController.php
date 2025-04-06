@@ -32,20 +32,25 @@ class ProjectController extends Controller
     
     
         // Méthode pour afficher tous les projets
-        public function index(Request $request)
+        public function index()
         {
-            $query = Project::query();
-    
-            // Filtrer uniquement sur POST avec une recherche
-            if ($request->isMethod('post') && $request->has('search')) {
-                $search = $request->input('search');
-                $query->where('name', 'like', '%' . $search . '%');
+            $user = auth()->user();
+        
+            if ($user->hasRole(['admin', 'superviseur'])) {
+                $projects = Project::paginate(10);
+            } else {
+                $projects = Project::whereHas('documents', function ($query) use ($user) {
+                    $query->whereHas('accesses', function ($q) use ($user) {
+                        $q->where('user_id', $user->id)
+                          ->whereIn('permission', ['read', 'write']);
+                    });
+                })->paginate(10);
             }
-    
-            $projects = $query->paginate(10);
-    
+        
+            // ✅ On transmet la variable à la vue
             return view('projects.index', compact('projects'));
         }
+        
 
     public function edit(Project $project)
     {
@@ -91,17 +96,28 @@ class ProjectController extends Controller
     }
 
     public function showDocuments($projectId)
-    {
-        $project = Project::with('documents')->findOrFail($projectId);
-        $projects = Project::all(); // Récupère tous les projets
-    
-        return view('projects.documents', [
-            'project' => $project,
-            'projects' => $projects, // Passe la liste des projets à la vue
-            'documents' => $project->documents,
-        ]);
+{
+    $user = auth()->user();
+    $project = Project::with('documents')->findOrFail($projectId);
+    $projects = Project::all(); // Liste complète pour affichage latéral ou dropdown
+
+    // Si l'utilisateur est admin ou superviseur → voir tous les documents du projet
+    if ($user->hasRole(['admin', 'superviseur'])) {
+        $documents = $project->documents;
+    } else {
+        // Filtrer les documents du projet auxquels l'utilisateur a un accès explicite
+        $documents = $project->documents()->whereHas('accesses', function ($query) use ($user) {
+            $query->where('user_id', $user->id)
+                  ->whereIn('permission', ['read', 'write']);
+        })->get();
     }
-    
+
+    return view('projects.documents', [
+        'project' => $project,
+        'projects' => $projects,
+        'documents' => $documents,
+    ]);
+}
 
     public function downloadDocument($projectId, $documentId)
     {
@@ -133,80 +149,96 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $projectId)->with('success', 'Document mis à jour avec succès.');
     }
 
+
+
     public function revision(Request $request, $id)
     {
         DB::beginTransaction();
     
         try {
-            // 1. Récupérer le document avec verrouillage
-            $document = Document::lockForUpdate()->findOrFail($id);
-            $oldPath = $document->getRawOriginal('path'); // Sauvegarde du chemin actuel
+            // Affichage de l'ID dans la requête
+            Log::info("ID reçu dans la requête : $id");
     
-            // 2. Validation stricte
-            $validated = $request->validate([
-                'file' => [
-                    'required',
-                    'file',
-                    'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr',
-                    'max:20480'
-                ],
+            // Récupération du document par ID
+            $document = Document::find($id);
+            
+            // Vérification que le document existe bien
+            if (!$document) {
+                Log::error("Document ID $id introuvable.");
+                return redirect()->back()->with('error', "Document introuvable.");
+            }
+    
+            // Affichage de l'ID du document dans la base de données
+            Log::info("Tentative de mise à jour du document avec l'ID : $document->id");
+    
+            // Récupérer l'ancien chemin du fichier
+            $oldPath = $document->path;
+            Log::info("Ancien chemin du fichier : $oldPath");
+    
+            // Validation du fichier
+            $request->validate([
+                'file' => 'required|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr|max:20480',
             ]);
     
             $file = $request->file('file');
-    
-            // 3. Générer le nouveau nom de fichier
             $extension = $file->getClientOriginalExtension();
-            $newFileName = 'doc_'.$id.'_'.time().'_'.Str::random(8).'.'.$extension;
-            $newStoragePath = 'documents/'.$newFileName;
     
-            // 4. S'assurer que le dossier "documents" existe
-            if (!Storage::disk('public')->exists('documents')) {
-                Storage::disk('public')->makeDirectory('documents');
+            // Vérification que le document a un chemin valide
+            if (!$oldPath) {
+                throw new \Exception("Le document ne possède pas de chemin de fichier valide.");
             }
     
-            // 5. Sauvegarde du nouveau fichier
-            if (!Storage::disk('public')->put($newStoragePath, file_get_contents($file->getRealPath()))) {
-                throw new \Exception("Échec de l'écriture du fichier");
+            // Vérifier si le fichier existe avant de tenter de le supprimer
+            if ($oldPath && Storage::disk('public')->exists($oldPath)) {
+                Log::info("Le fichier existe, suppression en cours : $oldPath");
+                Storage::disk('public')->delete($oldPath);
+                Log::info("Ancien fichier supprimé : $oldPath");
+            } else {
+                Log::error("Fichier introuvable : $oldPath");
             }
     
-            // 6. Vérifier que le fichier est bien stocké
+            // Enregistrer le fichier sous un nouveau chemin (ou le même si tu veux écraser)
+            $newStoragePath = 'documents/' . time() . '.' . $extension; // Créer un nouveau nom de fichier unique
+            Storage::disk('public')->put($newStoragePath, file_get_contents($file->getRealPath()));
+    
+            // Vérifier si le fichier est bien stocké
             if (!Storage::disk('public')->exists($newStoragePath)) {
-                throw new \Exception("Le fichier n'a pas été créé correctement");
+                throw new \Exception("Le fichier n'a pas pu être enregistré.");
             }
     
-            // 7. Mise à jour des informations du document
+            // Mise à jour de la base de données avec le nouveau chemin
             $document->update([
-                'path' => $newStoragePath,
                 'name' => $file->getClientOriginalName(),
                 'file_type' => $extension,
+                'path' => $newStoragePath, // Mettre à jour le chemin pour que ce soit celui du nouveau fichier
                 'updated_at' => now(),
             ]);
     
-            // 8. Suppression immédiate de l'ancien fichier
-            if ($oldPath && Storage::disk('public')->exists($oldPath)) {
-                Storage::disk('public')->delete($oldPath);
-            }
-    
             DB::commit();
     
-            return redirect()->back()
-                   ->with('success', 'Fichier mis à jour avec succès.');
+            // Nettoyage du cache
+            clearstatcache();
+            if (function_exists('opcache_reset')) {
+                opcache_reset();
+            }
+    
+            Log::info("Fichier mis à jour avec succès : $newStoragePath");
+    
+            return redirect()->back()->with('success', 'Fichier mis à jour avec succès.');
     
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error("Erreur lors de la mise à jour du fichier : " . $e->getMessage());
     
-            // Supprimer le nouveau fichier en cas d'échec
-            if (isset($newStoragePath) && Storage::disk('public')->exists($newStoragePath)) {
-                Storage::disk('public')->delete($newStoragePath);
-            }
-    
-            \Log::error("Erreur lors de la mise à jour du document: ".$e->getMessage());
-    
-            return redirect()->back()
-                   ->with('error', 'Échec de la mise à jour: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Échec de la mise à jour: ' . $e->getMessage());
         }
     }
     
+
+    
+    
+
+
     public function deleteDocument($projectId, $documentId)
     {
         $document = Document::where('project_id', $projectId)->findOrFail($documentId);

@@ -40,7 +40,24 @@
                                         <td>{{ $access->permission }}</td>
                                         <td>{{ $access->created_at->format('d-m-Y H:i') }}</td>
                                         <td class="text-right">
-                                            <!-- Actions (like Edit/Delete) can go here -->
+                                            <a class="edit-access-btn" 
+                                            data-id="{{ $access->id }}"
+                                            data-user_name="{{ $access->user_name}}"
+                                            data-project_name="{{ $access->project_name }}"
+                                            data-document_name="{{ $access->documentname}}"
+                                            data-access="{{ $access->permission }}"
+                                            data-date_added="{{ $access->created_at->format('d-m-Y H:i') }}"
+                                            data-toggle="modal" 
+                                            data-target="#editAccessModal">
+                                                <i class="fas fa-pencil-alt m-r-5"></i>
+                                            </a>
+                                            <a href="#" class="delete-document-btn" 
+                                            data-id="{{ $access->id }}" 
+                                            data-name="{{ $access->document->name ?? 'Unknown Document' }}" 
+                                            data-toggle="modal" 
+                                            data-target="#delete_modal">
+                                                <i class="fas fa-trash-alt m-r-5"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -82,23 +99,24 @@
                         </select>
                     </div>
 
-              <!-- Project Select -->
-<div class="form-group">
-    <label for="projectSelect">Project</label>
-    <select class="form-control" id="projectSelect" name="project_id">
-        @foreach($projects as $project)
-            <option value="{{ $project->id }}">{{ $project->name }}</option>
-        @endforeach
-    </select>
-</div>
+                    <!-- Project Select -->
+                    <div class="form-group">
+                        <label for="projectSelect">Project</label>
+                        <select class="form-control" id="projectSelect" name="project_id">
+                            @foreach($projects as $project)
+                                <option value="{{ $project->id }}">{{ $project->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-<!-- Document Select -->
-<div class="form-group">
-    <label for="documentSelect">Document</label>
-    <select class="form-control" id="documentSelect" name="document_id">
-        <option value="" disabled selected>Sélectionnez d'abord un projet</option>
-    </select>
-</div>
+                    <!-- Document Select -->
+                    <div class="form-group">
+                        <label for="documentSelect">Document</label>
+                        <select class="form-control" id="documentSelect" name="document_id">
+                            <option value="" disabled selected>Sélectionnez d'abord un projet</option>
+                        </select>
+                    </div>
+
                     <!-- Access Type Select -->
                     <div class="form-group">
                         <label for="accessType">Access Type</label>
@@ -117,45 +135,212 @@
     </div>
 </div>
 
+<div class="modal fade" id="editAccessModal" tabindex="-1" role="dialog" aria-labelledby="editAccessModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAccessModalLabel">Change access</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editAccessForm" method="POST" action="{{ route('access.update') }}">
+                @csrf
+                @method('PUT')
+                <div class="modal-body">
+                    <input type="hidden" name="access_id" id="access-id-to-edit">
+                    <!-- Sélectionner l'utilisateur -->
+                    <div class="form-group">
+                        <label for="userSelect">User</label>
+                        <select class="form-control" id="userSelect" name="user_id" required>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Sélectionner le projet -->
+                    <div class="form-group">
+                        <label for="projectSelect">Project</label>
+                        <select class="form-control" id="projectSelect" name="project_id" required>
+                            @foreach($projects as $project)
+                                <option value="{{ $project->id }}">{{ $project->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Sélectionner le document -->
+                    <div class="form-group">
+                        <label for="documentSelect">Document</label>
+                        <select class="form-control" id="documentSelect" name="document_id" required>
+                            <option value="" disabled selected>Sélectionnez un projet d'abord</option>
+                        </select>
+                    </div>
+
+                    <!-- Type d'accès -->
+                    <div class="form-group">
+                        <label for="accessType">Access Type</label>
+                        <select class="form-control" id="accessType" name="permission" required>
+                            <option value="read">Lecture</option>
+                            <option value="write">Écriture</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Access Edit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="delete_modal" tabindex="-1" role="dialog" aria-labelledby="delete_modal_label" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="delete_modal_label">Confirm deletion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this permission ?</p>
+            </div>
+            <div class="modal-footer">
+                <form id="delete-access-form" method="POST" action="{{ route('access.delete') }}">
+                    @csrf
+                    @method('DELETE')
+                    <input type="hidden" name="access_id" id="access-id-to-delete">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <!-- Script to handle the dynamic document loading -->
-<script>
+ <script>
 $(document).ready(function() {
-    $('#projectSelect').change(function() {
-        const projectId = $(this).val();
-        const $documentSelect = $('#documentSelect');
+    // =============================================
+    // FONCTION COMMUNE DE CHARGEMENT DES DOCUMENTS
+    // =============================================
+    function loadDocuments(projectId, selectedDocumentId = null, targetSelector = '#documentSelect') {
+        const $documentSelect = $(targetSelector);
         
         if (!projectId) {
-            $documentSelect.html('<option value="" disabled selected>Sélectionnez un projet</option>');
-            return;
+            $documentSelect.html('<option value="" disabled selected>Sélectionnez un projet d\'abord</option>');
+            return Promise.resolve();
         }
 
-        $documentSelect.html('<option value="" disabled>Chargement...</option>');
-        
-        $.get(`/get-documents/${projectId}`)
-            .done(function(documents) {
-                $documentSelect.empty();
-                
-                if (documents.length === 0) {
-                    $documentSelect.append($('<option>', {
-                        value: '',
-                        text: 'Aucun document disponible',
-                        disabled: true
-                    }));
-                } else {
-                    $.each(documents, function(index, doc) {
-                        $documentSelect.append($('<option>', {
-                            value: doc.id,
-                            text: doc.name
-                        }));
-                    });
-                }
+        $documentSelect.html('<option value="">Chargement en cours...</option>');
+
+        return $.ajax({
+            url: '/get-documents/' + projectId,
+            method: 'GET',
+            dataType: 'json'
+        }).then(function(documents) {
+            let options = '<option value="">Sélectionnez un document</option>';
+            
+            if (documents && documents.length > 0) {
+                documents.forEach(function(doc) {
+                    const selected = (doc.id == selectedDocumentId) ? 'selected' : '';
+                    options += `<option value="${doc.id}" ${selected}>${doc.name}</option>`;
+                });
+            } else {
+                options += '<option value="" disabled>Aucun document disponible</option>';
+            }
+            
+            $documentSelect.html(options);
+            
+            if (selectedDocumentId && !documents.some(d => d.id == selectedDocumentId)) {
+                console.warn("Document précédent non disponible dans ce projet");
+            }
+        }).fail(function() {
+            $documentSelect.html('<option value="" disabled>Erreur de chargement</option>');
+        });
+    }
+
+    // =============================================
+    // MODAL D'ÉDITION - GESTION COMPLÈTE
+    // =============================================
+    $(document).on('click', '.edit-access-btn', function() {
+        // Récupération de toutes les données
+        const accessData = {
+            id: $(this).data('id'),
+            user_id: $(this).data('user_id'),
+            user_name: $(this).data('user_name'),
+            project_id: $(this).data('project_id'),
+            project_name: $(this).data('project_name'),
+            document_id: $(this).data('document_id'),
+            document_name: $(this).data('document_name'),
+            permission: $(this).data('access'),
+            date_added: $(this).data('date_added')
+        };
+
+        // 1. Remplissage des champs cachés et visibles
+        $('#editAccessModal #access-id-to-edit').val(accessData.id);
+        $('#editAccessModal #userSelect').val(accessData.user_id);
+        $('#editAccessModal #projectSelect').val(accessData.project_id);
+        $('#editAccessModal #accessType').val(accessData.permission);
+
+        // 2. Affichage des informations actuelles (lecture seule)
+        $('#currentAccessDetails').html(`
+            <div class="alert alert-info">
+                <h6>Accès actuel</h6>
+                <p><strong>Utilisateur:</strong> ${accessData.user_name || 'Non spécifié'}</p>
+                <p><strong>Projet:</strong> ${accessData.project_name || 'Non spécifié'}</p>
+                <p><strong>Document:</strong> ${accessData.document_name || 'Non spécifié'}</p>
+                <p><strong>Permission:</strong> ${accessData.permission === 'read' ? 'Lecture' : 'Écriture'}</p>
+                <p><strong>Créé le:</strong> ${accessData.date_added || 'Date inconnue'}</p>
+            </div>
+        `);
+
+        // 3. Chargement des documents avec préservation de la sélection actuelle
+        loadDocuments(accessData.project_id, accessData.document_id, '#editAccessModal #documentSelect')
+            .then(() => {
+                // 4. Ouverture du modal une fois tout chargé
+                $('#editAccessModal').modal('show');
             })
-            .fail(function(error) {
-                $documentSelect.html('<option value="" disabled>Erreur de chargement</option>');
-                console.error(error);
+            .catch(error => {
+                console.error("Erreur lors du chargement:", error);
+                $('#editAccessModal').modal('show');
             });
     });
-});
-</script>
 
+    // Gestion du changement de projet dans le modal d'édition
+    $('#editAccessModal #projectSelect').on('change', function() {
+        const newProjectId = $(this).val();
+        loadDocuments(newProjectId, null, '#editAccessModal #documentSelect');
+    });
+
+    // =============================================
+    // MODAL D'AJOUT - GESTION
+    // =============================================
+    $('#givePermissionModal').on('show.bs.modal', function() {
+        const projectId = $('#givePermissionModal #projectSelect').val();
+        loadDocuments(projectId, null, '#givePermissionModal #documentSelect');
+    });
+
+    $('#givePermissionModal #projectSelect').on('change', function() {
+        const projectId = $(this).val();
+        loadDocuments(projectId, null, '#givePermissionModal #documentSelect');
+    });
+});
+
+
+$(document).on('click', '.delete-document-btn', function() {
+    var accessId = $(this).data('id');
+    var documentName = $(this).data('name');
+    
+    // Mettre à jour le modal avec les informations du document à supprimer
+    $('#document-name-to-delete').text(documentName);
+    $('#access-id-to-delete').val(accessId);
+});
+
+</script>
 @endsection
