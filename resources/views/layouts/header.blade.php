@@ -10,18 +10,25 @@
     <li class="nav-item dropdown has-arrow">
     <a href="#" class="dropdown-toggle nav-link" data-toggle="dropdown"> 
         <span class="user-img">
-            <img class="rounded-circle" src="{{ asset('assets/img/profiles/avatar-01.jpg') }}" width="31" alt="Soeng Souy">
+            <img class="rounded-circle" src="#" width="31" alt="">
         </span> 
     </a>
     <div class="dropdown-menu">
         <div class="user-header">
-            <div class="avatar avatar-sm"> 
-                <img src="{{ asset('assets/img/profiles/avatar-01.jpg') }}" alt="User Image" class="avatar-img rounded-circle"> 
-            </div>
-            <div class="user-text">
-                <h6>{{ Auth::user()->name }}</h6>
-                <p class="text-muted mb-0">Admin</p>
-            </div>
+            
+        <div class="user-text">
+    <h6>{{ Auth::user()->name }}</h6>
+    <p class="text-muted mb-0">
+        @if (Auth::user()->hasRole('admin'))
+            Admin
+        @elseif (Auth::user()->hasRole('superviseur'))
+            Superviseur
+        @elseif (Auth::user()->hasRole('empployee'))
+            Employé
+        @endif
+    </p>
+</div>
+
         </div>
         <form method="POST" action="{{ route('logout') }}">
             @csrf

@@ -66,8 +66,6 @@ class AccessController extends Controller
         $access->document_id = $request->document_id;
         $access->permission = $request->permission;
         $access->save();
-
-        // Retourner une réponse de succès
         return redirect()->route('access.index')->with('success', 'Permission donnée avec succès.');
     }
 
@@ -120,8 +118,6 @@ class AccessController extends Controller
         $access->document_id = $request->document_id;
         $access->permission = $request->permission;
         $access->save();
-
-        // Retourner une réponse
         return redirect()->route('access.index')->with('success', 'L\'accès a été mis à jour avec succès.');
     }
     

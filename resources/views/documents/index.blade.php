@@ -27,7 +27,7 @@
                                         <th>Name</th>
                                         <th>Type</th>
                                         <th>Project ID</th>
-                                        <th>Access</th>
+                                        
                                         <th>Date</th>
                                         <th class="text-right">Actions</th>
                                     </tr>
@@ -42,8 +42,9 @@
                                     </td>
                                     <td>{{ $document->file_type }}</td>
                                     <td>{{ $document->project_id }}</td>
-                                    <td>{{ $document->access }}</td>
-                                    <td>{{ $document->date_added }}</td>
+                                    
+                                    <td>{{ $document->updated_at->format('d/m/Y H:i') }}</td>
+
                                     <td class="text-right">
                                     @can('update document')
                                         <a href="#" class="edit-document-btn" data-id="{{ $document->id }}"
@@ -80,7 +81,7 @@
                                     @endphp
 
                                     {{-- Icône de téléchargement - visible uniquement si admin/superviseur ou write --}}
-                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
+                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess || $hasReadAccess )
                                         <a href="{{ route('documents.download', $document->id) }}" class="download-document-btn">
                                             <i class="fas fa-download m-r-5"></i> 
                                         </a>
@@ -91,13 +92,6 @@
                                         <a href="{{ route('documents.revision', $document->id) }}" class="revision-document-btn" 
                                         data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
                                             <i class="fas fa-edit m-r-5"></i> 
-                                        </a>
-                                    @endif
-
-                                    {{-- Icône de visualisation - visible uniquement si admin/superviseur ou read --}}
-                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasReadAccess)
-                                        <a href="{{ route('documents.view', $document->id) }}" class="view-document-btn">
-                                            <i class="fas fa-eye m-r-5"></i> 
                                         </a>
                                     @endif
 
@@ -158,14 +152,8 @@
                             <option value="catia">catia</option>
                         </select>
                     </div>
-                     <!-- Access Information -->
-                    <div class="form-group">
-                        <label for="access">Acces</label>
-                        <select class="form-control" id="access" name="access">
-                            <option value="read">Read</option>
-                            <option value="read and write">Read And Write</option>
-                        </select>
-                    </div>
+                     
+                   
                     <!-- Date Added -->
                     <div class="form-group">
                         <label for="docDate">Date Added</label>
@@ -227,14 +215,7 @@
                         <label for="editProjectId">Project ID</label>
                         <input type="number" class="form-control" id="editProjectId" name="project_id" required>
                     </div>
-                    <div class="form-group">
-                        <label for="editAccess">Access</label>
-                        <select class="form-control" id="editAccess" name="access" required>
-                            <option value="">Select access</option>
-                            <option value="read">Read</option>
-                            <option value="read and write">Read and Write</option>
-                        </select>
-                    </div>
+
 
                     <div class="form-group">
                         <label for="editDate">Date Added</label>
@@ -300,6 +281,8 @@
         </div>
     </div>
 </div>
+
+
 <script>
     $(document).ready(function() {
         // Edit document modal

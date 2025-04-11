@@ -32,8 +32,9 @@ class ProjectController extends Controller
     
     
         // Méthode pour afficher tous les projets
-        public function index()
-        {
+    public function index()
+    {
+
             $user = auth()->user();
         
             if ($user->hasRole(['admin', 'superviseur'])) {
@@ -49,7 +50,7 @@ class ProjectController extends Controller
         
             // ✅ On transmet la variable à la vue
             return view('projects.index', compact('projects'));
-        }
+    }
         
 
     public function edit(Project $project)
@@ -82,21 +83,20 @@ class ProjectController extends Controller
 
     public function search(Request $request)
     {
-        $search = $request->query('search');
-
-        // Filtrer les projets par nom si une recherche est saisie
-        if ($search) {
-            $projects = Project::where('name', '=' , $search)->get();
+        $searchTerm = trim($request->input('search'));
+    
+        if (!empty($searchTerm)) {
+            // Recherche EXACTE (case-sensitive)
+            $projects = Project::where('name', '=', $searchTerm)->get();
         } else {
-            $projects = Project::all(); // Afficher tous les projets si pas de recherche
+            // Si aucun terme de recherche, retourner tous les projets (ou un message)
+            $projects = Project::all();
         }
-
-        // Retourner la vue avec les projets
-        return view('projects.index', compact('projects')); // Ajustez 'projects.index' selon votre vue
+    
+        return view('projects.index', compact('projects'));
     }
-
     public function showDocuments($projectId)
-{
+    {
     $user = auth()->user();
     $project = Project::with('documents')->findOrFail($projectId);
     $projects = Project::all(); // Liste complète pour affichage latéral ou dropdown
@@ -117,7 +117,8 @@ class ProjectController extends Controller
         'projects' => $projects,
         'documents' => $documents,
     ]);
-}
+
+    }
 
     public function downloadDocument($projectId, $documentId)
     {
@@ -148,7 +149,6 @@ class ProjectController extends Controller
         $document->update($request->only(['name', 'access']));
         return redirect()->route('projects.show', $projectId)->with('success', 'Document mis à jour avec succès.');
     }
-
 
 
     public function revision(Request $request, $id)
@@ -234,10 +234,6 @@ class ProjectController extends Controller
         }
     }
     
-
-    
-    
-
 
     public function deleteDocument($projectId, $documentId)
     {

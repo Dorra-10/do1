@@ -7,10 +7,12 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\AccessController;
+use App\Http\Controllers\HistoryController;
+
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('auth.login');
     
 });
 
@@ -19,25 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::resource('documents', DocumentController::class);
-    Route::resource('documents', DocumentController::class)->except(['index', 'store']);
     
-
-    Route::post('/documents/store', [DocumentController::class, 'store'])->name('documents.store');
-    Route::get('projects/{project}/documents', [ProjectController::class, 'showDocuments'])->name('projects.documents');
-    Route::prefix('projects/{projectId}/documents')->group(function () {
-    Route::get('/', [ProjectController::class, 'showDocuments'])->name('projects.documents');
-        Route::get('/download/{documentId}', [ProjectController::class, 'downloadDocument'])->name('projects.documents.download');
-        Route::post('/update/{document}', [ProjectController::class, 'updateDocument'])->name('projects.documents.update');
-        Route::post('/revise/{documentId}', [ProjectController::class, 'reviseDocument'])->name('projects.documents.revise');
-        Route::delete('/delete/{documentId}', [ProjectController::class, 'deleteDocument'])->name('projects.documents.delete');
-    });
-   
-
-    Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
-    
-    
-
 
 });
 
@@ -68,6 +52,43 @@ Route::group(['middleware' => ['role:admin']], function () {
     Route::put('documents/{document}', [DocumentController::class, 'update'])->name('documents.update');  // Mettre à jour un document
     // Supprimer un document
     Route::delete('documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+
+});
+
+// Routes accessibles aux admin, superviseur et employé
+Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], function () {
+    // Route pour voir les projets
+    Route::match(['get', 'post'], '/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::post('/projects/search', [ProjectController::class, 'search'])->name('projects.search');
+    Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+    Route::post('documents/{id}/revision', [DocumentController::class, 'revision'])->name('documents.revision');
+    
+    Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
+    Route::resource('documents', DocumentController::class);
+    Route::resource('documents', DocumentController::class)->except(['index', 'store']);
+    
+
+    Route::post('/documents/store', [DocumentController::class, 'store'])->name('documents.store');
+    Route::get('projects/{project}/documents', [ProjectController::class, 'showDocuments'])->name('projects.documents');
+    Route::prefix('projects/{projectId}/documents')->group(function () {
+    Route::get('/', [ProjectController::class, 'showDocuments'])->name('projects.documents');
+        Route::get('/download/{documentId}', [ProjectController::class, 'downloadDocument'])->name('projects.documents.download');
+        Route::post('/update/{document}', [ProjectController::class, 'updateDocument'])->name('projects.documents.update');
+        Route::post('/revise/{documentId}', [ProjectController::class, 'reviseDocument'])->name('projects.documents.revise');
+        Route::delete('/delete/{documentId}', [ProjectController::class, 'deleteDocument'])->name('projects.documents.delete');
+    });
+    Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
+
+    //History
+    Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
+    
+
+});
+
+Route::group(['middleware' => ['role:admin|superviseur']], function () {
+    Route::post('/projects/store', [ProjectController::class, 'store'])->name('projects.store');
+    Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
+    Route::resource('users', UserController::class)->except(['show']);
     //Access Route
    
     Route::get('/access', [AccessController::class, 'index'])->name('access.index');
@@ -76,36 +97,10 @@ Route::group(['middleware' => ['role:admin']], function () {
     Route::get('/get-documents/{projectId}', [AccessController::class, 'getDocumentsByProject'])->name('getDocumentsByProject');
     Route::get('/projects/{projectId}/documents', [ProjectController::class, 'getDocumentsByProject']);
 
-
-
     Route::delete('/access/delete', [AccessController::class, 'deleteAccess'])->name('access.delete');
     Route::get('/edit-access/{permissionId}', [AccessController::class, 'editAccessForm']);
-
     Route::put('/access/update', [AccessController::class, 'update'])->name('access.update');
-
     
-    
-});
-
-// Routes accessibles aux admin, superviseur et employé
-Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], function () {
-    // Route pour voir les projets
-    Route::match(['get', 'post'], '/projects', [ProjectController::class, 'index'])->name('projects.index');
-    Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
-    Route::post('documents/{id}/revision', [DocumentController::class, 'revision'])->name('documents.revision');
-    Route::get('document/{id}/view', [DocumentController::class, 'view'])->name('documents.view');
-    Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
-   
-    
-});
-Route::group(['middleware' => ['role:admin|superviseur']], function () {
-    Route::post('/projects/store', [ProjectController::class, 'store'])->name('projects.store');
-    Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
-    Route::resource('users', UserController::class)->except(['show']);
-    
-    
-
-
 });
    
 

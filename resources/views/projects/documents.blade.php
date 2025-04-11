@@ -24,8 +24,6 @@
                                         <th> ID</th>
                                         <th>Name</th>
                                         <th>Type</th>
-                                        
-                                        <th>Access</th>
                                         <th>Date</th>
                                         <th class="text-right">Actions</th>
                                     </tr>
@@ -40,8 +38,7 @@
                                     </td>
                                     <td>{{ $document->file_type }}</td>
                                    
-                                    <td>{{ $document->access }}</td>
-                                    <td>{{ $document->date_added }}</td>
+                                    <td>{{ $document->updated_at->format('d/m/Y H:i') }}</td>
                                     
                                     <td class="text-right">
                                     @can('update document')
@@ -76,8 +73,8 @@
                                             ->isNotEmpty();
                                     @endphp
 
-                                    {{-- Icône de téléchargement - visible uniquement si admin/superviseur ou write --}}
-                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
+                                    {{-- Icône de téléchargement - visible uniquement si admin/superviseur ou write ou read--}}
+                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess || $hasReadAccess )
                                         <a href="{{ route('documents.download', $document->id) }}" class="download-document-btn">
                                             <i class="fas fa-download m-r-5"></i> 
                                         </a>
@@ -88,13 +85,6 @@
                                         <a href="{{ route('documents.revision', $document->id) }}" class="revision-document-btn" 
                                         data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
                                             <i class="fas fa-edit m-r-5"></i> 
-                                        </a>
-                                    @endif
-
-                                    {{-- Icône de visualisation - visible uniquement si admin/superviseur ou read --}}
-                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasReadAccess)
-                                        <a href="{{ route('documents.view', $document->id) }}" class="view-document-btn">
-                                            <i class="fas fa-eye m-r-5"></i> 
                                         </a>
                                     @endif
                                 

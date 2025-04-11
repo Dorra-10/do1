@@ -9,7 +9,7 @@ class Access extends Model
 {
     use HasFactory;
 
-    protected $table = 'accesses';  // Ajoute ceci pour définir le nom correct de la table
+    protected $table = 'accesses'; 
 
     protected $fillable = ['project_id', 'document_id', 'user_id', 'permission'];
 

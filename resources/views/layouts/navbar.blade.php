@@ -15,8 +15,9 @@
                             <span>Documents</span>
                         </a>
                     </li>  
+                    
                     <li class="submenu">
-                        <a href="#" class="nav-link">
+                        <a href="{{ route('history.index') }}" class="nav-link">
                             <i class="fas fa-history"></i> 
                             <span>History</span>
                         </a>
@@ -35,11 +36,17 @@
                         </a>
                     </li> 
                     <li class="submenu">
-                        <a href="#" class="nav-link">
+                        <a href="{{ route('history.index') }}" class="nav-link">
                             <i class="fas fa-history"></i> 
                             <span>History</span>
                         </a>
                     </li>
+                    <li >
+                        <a href="{{ route('access.index') }}" class="nav-link">
+                        <i class="fas fa-lock"></i>
+                            <span>Access</span>
+                        </a>
+                    </li> 
 				<li class="submenu">
 						<a href="#"><i class="fas fa-user"></i> <span>Users</span> <span class="menu-arrow"></span></a>
 							<ul class="submenu_class" style="display: none;">
@@ -69,7 +76,7 @@
                         </a>
                     </li> 
                     <li >
-                        <a href="#" class="nav-link">
+                        <a href="{{ route('history.index') }}" class="nav-link">
                             <i class="fas fa-history"></i> 
                             <span>History</span>
                         </a>

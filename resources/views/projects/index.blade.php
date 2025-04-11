@@ -20,12 +20,12 @@
                 <div id="successMessage" class="alert alert-success">{{ session('status') }}</div>
             @endif
         </div>
-        <!-- /Page Header -->
+      
 
         <!-- Search Filter -->
         <div class="row mb-3">
             <div class="col-sm-12 col-md-6">
-                <form method="POST" action="{{ route('projects.index') }}" class="form-inline">
+                <form method="GET" action="{{ route('projects.index') }}" class="form-inline">
                     @csrf
                     <div class="input-group w-100">
                         <input type="text" name="search" class="form-control" placeholder="Enter the project name" value="">
@@ -43,7 +43,7 @@
     </div>
 @endif
 
-        <!-- /Search Filter -->
+       
 
         <div class="row">
             <div class="col-sm-12">

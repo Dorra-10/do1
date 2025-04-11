@@ -40,11 +40,7 @@ class DocumentController extends Controller
     return view('documents.index', compact('documents', 'projects'));
 }
 
-    
-    
-
-public function upload(Request $request)
-    {
+    public function upload(Request $request){
         $request->validate([
             'document' => 'required|file|mimes:pdf,docx,pptx,xlsx,xls|max:20480',
             'project_id' => 'required|exists:projects,id',
@@ -93,7 +89,7 @@ public function upload(Request $request)
 
     // Téléchargement avec nom d'origine
     return Storage::disk('public')->download($filePath, $document->name);
-}
+    }
 
 
 
@@ -129,8 +125,8 @@ public function upload(Request $request)
         return redirect()->route('documents.index')->with('success', 'Document mis à jour avec succès');
     }
 
-    public function revision(Request $request, $id)
-{
+    public function revision(Request $request, $id){
+        
     DB::beginTransaction();
 
     try {
@@ -191,7 +187,7 @@ public function upload(Request $request)
         DB::rollBack();
         return redirect()->back()->with('error', 'Échec de la mise à jour: ' . $e->getMessage());
     }
-}
+    }
 
    
 
@@ -211,57 +207,5 @@ public function upload(Request $request)
         return redirect()->route('documents.index')->with('status', 'Document supprimé avec succès !');
     }
 
-    
-
-    public function view($id)
-{
-    $document = Document::findOrFail($id);
-    $filePath = Storage::disk('public')->path($document->path);
-
-    // Vérifier si le fichier est déjà un PDF
-    if (pathinfo($filePath, PATHINFO_EXTENSION) !== 'pdf') {
-        // Si ce n'est pas un PDF, le convertir en PDF
-        $pdfFileName = pathinfo($document->name, PATHINFO_FILENAME) . '.pdf';
-        $pdfPath = storage_path('app/public/converted/' . $pdfFileName);
-
-        // Si le PDF converti n'existe pas, le créer
-        if (!file_exists($pdfPath)) {
-            try {
-                $this->convertToPdf($filePath, $pdfPath);
-            } catch (\Exception $e) {
-                return redirect()->back()->with('error', 'Erreur lors de la conversion du document : ' . $e->getMessage());
-            }
-        }
-    } else {
-        // Si le fichier est déjà un PDF, il n'a pas besoin de conversion
-        $pdfPath = $filePath;
-    }
-
-    // Retourner le fichier PDF pour l'affichage
-    return response()->file($pdfPath);
-}
-
-private function convertToPdf($sourcePath, $destinationPath)
-{
-    // Vérifier l'extension du fichier source
-    $ext = pathinfo($sourcePath, PATHINFO_EXTENSION);
-
-    if (!file_exists(dirname($destinationPath))) {
-        mkdir(dirname($destinationPath), 0755, true);
-    }
-
-    // Utilisation de LibreOffice pour convertir les fichiers en PDF
-    $command = "libreoffice --headless --convert-to pdf --outdir " . escapeshellarg(dirname($destinationPath)) . " " . escapeshellarg($sourcePath);
-    exec($command, $output, $resultCode);
-
-    // Vérifier si la conversion a réussi
-    if ($resultCode !== 0) {
-        throw new \Exception("La conversion a échoué. Code d'erreur : $resultCode");
-    }
-}
-
-    
-
-    
 
 }
