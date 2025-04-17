@@ -15,6 +15,24 @@
                 </div>
             </div>
         </div>
+        <!-- Search Filter -->
+        <div class="row mb-3">
+            <div class="col-sm-12 col-md-6">
+                <form method="GET" action="{{ route('documents.index') }}">
+                    <div class="input-group w-100">
+                        <input type="text" name="search" class="form-control" 
+                            placeholder="Search document name, type or project" 
+                            value="{{ $searchTerm ?? '' }}">
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-success">Search</button>
+                            @if(!empty($searchTerm))
+                                <a href="{{ route('documents.index') }}" class="btn btn-secondary ml-2">Reset</a>
+                            @endif
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
         <div class="row">
             <div class="col-sm-12">
                 <div class="card card-table">
@@ -33,7 +51,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                @foreach($documents as $document)
+                                @forelse($documents as $document)
                                 <tr>
                                     <td>{{ $document->id }}</td>
                                     <td>
@@ -97,14 +115,35 @@
 
     
                                 </tr>
-                                @endforeach
-                                @if($documents->isEmpty())
+                                   <!-- Vos lignes de document existantes -->
+                                @empty
                                     <tr>
-                                        <td colspan="7" class="text-center">Aucun document trouvé.</td>
+                                        <td colspan="6" class="text-center">
+                                            @if(!empty($searchTerm))
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-search"></i> No documents found for "{{ $searchTerm }}"
+                                                </div>
+                                                <a href="{{ route('documents.index') }}" class="btn btn-sm btn-outline-primary">
+                                                    Show all documents
+                                                </a>
+                                            @else
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-info-circle"></i> No documents available
+                                                </div>
+                                                @can('upload document')
+                                                    <a href="#" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addDocumentModal">
+                                                        <i class="fas fa-plus"></i> Add document
+                                                    </a>
+                                                @endcan
+                                            @endif
+                                        </td>
                                     </tr>
-                                @endif
+                                @endforelse
                                 </tbody>
                             </table>
+                            <div class="d-flex justify-content-center mt-3">
+                                {{ $documents->appends(['search' => $searchTerm])->links() }}
+                            </div>
                         </div>
                     </div>
                 </div>

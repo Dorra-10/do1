@@ -17,29 +17,46 @@ use App\Models\History;
 
 class DocumentController extends Controller
 {
-    public function index()
-   {
-    $user = auth()->user();
-
-    if ($user->hasRole(['admin', 'superviseur'])) {
-        // Tous les documents + tous les projets
-        $documents = Document::with('project')->paginate(10);
-        $projects = Project::all();
-    } else {
-        // Seulement les documents accessibles à l'utilisateur
-        $documents = Document::whereHas('accesses', function ($query) use ($user) {
-            $query->where('user_id', $user->id)
-                  ->whereIn('permission', ['read', 'write']);
-        })->with('project')->paginate(10);
-
-        // Seulement les projets qui ont des documents accessibles par l'utilisateur
-        $projects = Project::whereHas('documents.accesses', function ($query) use ($user) {
-            $query->where('user_id', $user->id)
-                  ->whereIn('permission', ['read', 'write']);
-        })->get();
-    }
-
-    return view('documents.index', compact('documents', 'projects'));
+    public function index(Request $request)
+    {
+        $user = auth()->user();
+        $searchTerm = $request->input('search', '');
+    
+        // Documents query
+        $documentsQuery = Document::query();
+        
+        if ($user->hasRole(['admin', 'superviseur'])) {
+            // Tous les documents pour admin/superviseur
+            $projects = Project::all();
+        } else {
+            // Restrictions pour les autres utilisateurs
+            $documentsQuery->whereHas('accesses', function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                      ->whereIn('permission', ['read', 'write']);
+            });
+    
+            $projects = Project::whereHas('documents.accesses', function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                      ->whereIn('permission', ['read', 'write']);
+            })->get();
+        }
+    
+        // Ajout de la recherche si terme existant
+        if (!empty($searchTerm)) {
+            $documentsQuery->where(function($query) use ($searchTerm) {
+                $query->where('name', 'LIKE', '%'.$searchTerm.'%')
+                      ->orWhere('file_type', 'LIKE', '%'.$searchTerm.'%')
+                      ->orWhereHas('project', function($q) use ($searchTerm) {
+                          $q->where('name', 'LIKE', '%'.$searchTerm.'%');
+                      });
+            });
+        }
+    
+        $documents = $documentsQuery->with('project')
+                                   ->orderBy('date_added', 'desc')
+                                   ->paginate(10);
+    
+        return view('documents.index', compact('documents', 'projects', 'searchTerm'));
     }
 
     public function upload(Request $request){

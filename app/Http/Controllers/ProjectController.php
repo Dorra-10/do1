@@ -32,26 +32,34 @@ class ProjectController extends Controller
     
     
         // Méthode pour afficher tous les projets
-    public function index()
-    {
-
+        public function index(Request $request)
+        {
             $user = auth()->user();
+            $searchTerm = $request->input('search', ''); // Récupère le terme de recherche ou une chaîne vide
         
             if ($user->hasRole(['admin', 'superviseur'])) {
-                $projects = Project::paginate(10);
+                $query = Project::query();
             } else {
-                $projects = Project::whereHas('documents', function ($query) use ($user) {
+                $query = Project::whereHas('documents', function ($query) use ($user) {
                     $query->whereHas('accesses', function ($q) use ($user) {
                         $q->where('user_id', $user->id)
                           ->whereIn('permission', ['read', 'write']);
                     });
-                })->paginate(10);
+                });
             }
         
-            // ✅ On transmet la variable à la vue
-            return view('projects.index', compact('projects'));
-    }
+            // Ajoute la condition de recherche si un terme est fourni
+            if (!empty($searchTerm)) {
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('name', 'LIKE', '%'.$searchTerm.'%')
+                      ->orWhere('type', 'LIKE', '%'.$searchTerm.'%');
+                });
+            }
         
+            $projects = $query->orderBy('created_at', 'desc')->paginate(10);
+        
+            return view('projects.index', compact('projects', 'searchTerm'));
+        }
 
     public function edit(Project $project)
     {
@@ -82,19 +90,27 @@ class ProjectController extends Controller
     }
 
     public function search(Request $request)
-    {
-        $searchTerm = trim($request->input('search'));
-    
-        if (!empty($searchTerm)) {
-            // Recherche EXACTE (case-sensitive)
-            $projects = Project::where('name', '=', $searchTerm)->get();
-        } else {
-            // Si aucun terme de recherche, retourner tous les projets (ou un message)
-            $projects = Project::all();
-        }
-    
-        return view('projects.index', compact('projects'));
+{
+    $searchTerm = trim($request->input('search'));
+
+    $projects = Project::query();
+
+    if (!empty($searchTerm)) {
+        $projects->where('name', 'LIKE', '%'.$searchTerm.'%')
+                 ->orWhere('description', 'LIKE', '%'.$searchTerm.'%');
     }
+
+    $projects = $projects->latest()->get();
+
+    if ($request->ajax()) {
+        return response()->json([
+            'table' => view('projects.partials.table', compact('projects'))->render()
+        ]);
+    }
+
+    return view('projects.index', compact('projects'));
+}
+
     public function showDocuments($projectId)
     {
     $user = auth()->user();

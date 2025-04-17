@@ -81,7 +81,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Give Permission</h5>
+                <h5 class="modal-title" id="exampleModalLabel">Give Access</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -134,7 +134,7 @@
         </div>
     </div>
 </div>
-
+<!-- Edit Permission Modal -->
 <div class="modal fade" id="editAccessModal" tabindex="-1" role="dialog" aria-labelledby="editAccessModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -173,7 +173,7 @@
                     <div class="form-group">
                         <label for="documentSelect">Document</label>
                         <select class="form-control" id="documentSelect" name="document_id" required>
-                            <option value="" disabled selected>Sélectionnez un projet d'abord</option>
+                            <option value="" disabled selected>select project</option>
                         </select>
                     </div>
 
@@ -181,8 +181,8 @@
                     <div class="form-group">
                         <label for="accessType">Access Type</label>
                         <select class="form-control" id="accessType" name="permission" required>
-                            <option value="read">Lecture</option>
-                            <option value="write">Écriture</option>
+                            <option value="read">Read</option>
+                            <option value="write">Write</option>
                         </select>
                     </div>
                 </div>

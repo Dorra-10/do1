@@ -21,36 +21,30 @@
             @endif
         </div>
       
-
-        <!-- Search Filter -->
-        <div class="row mb-3">
-            <div class="col-sm-12 col-md-6">
-                <form method="GET" action="{{ route('projects.index') }}" class="form-inline">
-                    @csrf
-                    <div class="input-group w-100">
-                        <input type="text" name="search" class="form-control" placeholder="Enter the project name" value="">
-                        <div class="input-group-append">
-                            <button type="submit" class="btn btn-success">Search</button>
-                        </div>
-                        
-                    </div>
-                </form>
+<!-- Search Filter -->
+<div class="row mb-3">
+    <div class="col-sm-12 col-md-6">
+        <form method="GET" action="{{ route('projects.index') }}">
+            <div class="input-group w-100">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Search by name or type" 
+                       value="{{ request('search', '') }}">
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-success">Search</button>
+                    @if(request()->has('search') && !empty(request('search')))
+                        <a href="{{ route('projects.index') }}" class="btn btn-secondary ml-2">Reset</a>
+                    @endif
+                </div>
             </div>
-        </div>
-        @if(isset($message))
-    <div class="alert alert-warning mt-3">
-        {{ $message }}
+        </form>
     </div>
-@endif
-
-       
-
+</div>
         <div class="row">
             <div class="col-sm-12">
                 <div class="card card-table">
                     <div class="card-body booking_card">
                         <div class="table-responsive">
-                            <table class="datatable table table-striped table-hover table-center mb-0">
+                            <table class="datatable table  table-hover table-center mb-0">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -89,16 +83,30 @@
                                                 @endcan
                                             </td>
                                         </tr>
-                                    @empty
+                                        @empty
                                         <tr>
-                                            <td colspan="5">Aucun projet trouvé</td>
+                                            <td colspan="5" class="text-center">
+                                                @if(request()->has('search') && !empty(request('search')))
+                                                    <div class="alert alert-info">
+                                                       No projects found for the search "{{ request('search') }}"
+                                                    </div>
+                                                    <a href="{{ route('projects.index') }}" class="btn btn-sm btn-outline-primary">
+                                                    Show all projects
+                                                </a>
+                                                @else
+                                                    <div class="alert alert-info">
+                                                       No projects available at the moment
+                                                    </div>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforelse
                                 </tbody>
                             </table>
-                            <div class="d-flex justify-content-center">
-                                {{ $projects->links() }}
+                            <div class="d-flex justify-content-center mt-3">
+                                {{ $projects->appends(request()->query())->links() }}
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -268,6 +276,41 @@ $(document).ready(function() {
 
         // Afficher la modal
         $('#editProjectModal').modal('show');
+    });
+});
+$(document).ready(function() {
+    // Auto-hide success message
+    if ($('#successMessage').length) {
+        setTimeout(function() {
+            $('#successMessage').fadeOut('slow');
+        }, 3000);
+    }
+
+    // Edit project modal handling
+    $('.edit-project-btn').click(function() {
+        const projectId = $(this).data('id');
+        const name = $(this).data('name');
+        const type = $(this).data('type');
+        let dateAdded = $(this).data('date_added');
+        
+        // Format date for date input
+        if (dateAdded) {
+            const dateObj = new Date(dateAdded);
+            if (!isNaN(dateObj)) {
+                dateAdded = dateObj.toISOString().split('T')[0];
+            }
+        }
+        
+        $('#editProjectForm').attr('action', '{{ route("projects.update", ":id") }}'.replace(':id', projectId));
+        $('#editName').val(name);
+        $('#editType').val(type);
+        $('#editDate').val(dateAdded);
+    });
+
+    // Delete confirmation handling
+    $('.delete-project-btn').click(function() {
+        const projectId = $(this).data('id');
+        // Vous pouvez ajouter un traitement spécifique si nécessaire
     });
 });
 </script>
