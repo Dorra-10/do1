@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+class CreateAccessesTable extends Migration
+ {
     public function up()
     {
         Schema::create('accesses', function (Blueprint $table) {

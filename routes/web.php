@@ -12,8 +12,10 @@ use App\Http\Controllers\HistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect('/projects'); // ou autre route protégée
+    }
     return view('auth.login');
-    
 });
 
 // Routes accessibles uniquement aux utilisateurs authentifiés

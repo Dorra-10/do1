@@ -1,9 +1,11 @@
 <?php
 
-namespace Database\Seeders;
+namespace  Database\Seeders;
 
+use  App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
@@ -12,49 +14,53 @@ class UserRolePermissionSeeder extends Seeder
     /**
      * Run the database seeds.
      */
-    public function run(): void
+    public function run()
     {
-        // Create or Update Permissions (évite les doublons)
-        Permission::firstOrCreate(['name' => 'view role']);
-        Permission::firstOrCreate(['name' => 'create role']);
-        Permission::firstOrCreate(['name' => 'update role']);
-        Permission::firstOrCreate(['name' => 'delete role']);
+        // Permissions
+        $permissions = [
+            'view role',
+            'create role',
+            'edit role',
+            'delete role',
+            'view permission',
+            'create permission',
+            'edit permission',
+            'delete permission',
+            'view user',
+            'create user',
+            'update user',
+            'delete user',
+            'view project',
+            'create project',
+            'update project',
+            'delete project',
+            'view document',
+            'upload document',
+            'update document',
+            'delete document',
+            'view access',
+            'give access',
+            'update access',
+            'delete access',
+            // ajoute toutes les permissions nécessaires ici...
+        ];
 
-        Permission::firstOrCreate(['name' => 'view permission']);
-        Permission::firstOrCreate(['name' => 'create permission']);
-        Permission::firstOrCreate(['name' => 'update permission']);
-        Permission::firstOrCreate(['name' => 'delete permission']);
+        // Création des permissions
+        foreach ($permissions as $permission) {
+            // Utilise firstOrCreate pour éviter les doublons
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
 
-        Permission::firstOrCreate(['name' => 'view user']);
-        Permission::firstOrCreate(['name' => 'create user']);
-        Permission::firstOrCreate(['name' => 'update user']);
-        Permission::firstOrCreate(['name' => 'delete user']);
-
-        Permission::firstOrCreate(['name' => 'view project']); // Clé pour les employés
-        Permission::firstOrCreate(['name' => 'create project']);
-        Permission::firstOrCreate(['name' => 'update project']);
-        Permission::firstOrCreate(['name' => 'delete project']);
-
-        Permission::firstOrCreate(['name' => 'view document']); // Clé pour les employés
-        Permission::firstOrCreate(['name' => 'upload document']);
-        Permission::firstOrCreate(['name' => 'update document']);
-        Permission::firstOrCreate(['name' => 'delete document ']);
-
-        Permission::firstOrCreate(['name' => 'view Access']); // Clé pour les employés
-        Permission::firstOrCreate(['name' => 'Give Access']);
-        Permission::firstOrCreate(['name' => 'update Access']);
-        Permission::firstOrCreate(['name' => 'delete Access', 'guard_name' => 'web']);
-
-        // Create or Update Roles
+        // Création des rôles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $superviseurRole = Role::firstOrCreate(['name' => 'superviseur']);
         $employeeRole = Role::firstOrCreate(['name' => 'employee']);
 
-        // Sync permissions to admin role (toutes les permissions)
+        // Attribuer toutes les permissions au rôle admin
         $allPermissionNames = Permission::pluck('name')->toArray();
         $adminRole->syncPermissions($allPermissionNames);
 
-        // Sync permissions to superviseur role
+        // Synchronisation des permissions au rôle superviseur
         $superviseurRole->syncPermissions([
             'view project',
             'create project',
@@ -64,17 +70,37 @@ class UserRolePermissionSeeder extends Seeder
             'view document',
             'upload document',
             'update document',
-
-
         ]);
 
-        // Sync permissions to employee role
-        $employeeRole->syncPermissions([
-            'view project', 
-            'view document',
+        // Let's Create User and assign Role to it.
+        $adminUser = User::firstOrCreate([
+                            'email' => 'admin@gmail.com'
+                        ], [
+                            'name' => 'Admin',
+                            'email' => 'admin@gmail.com',
+                            'password' => Hash::make ('12345678'),
+                        ]);
 
+        $adminUser->assignRole($adminRole);
+        $superviseurUser = User::firstOrCreate([
+            'email' => 'siperviseur@gmail.com'
+        ], [
+            'name' => 'superviseur',
+            'email' => 'superviseur@gmail.com',
+            'password' => Hash::make ('12345678'),
         ]);
 
-    
+       $superviseurUser->assignRole($superviseurRole);
+
+
+        $employeeUser = User::firstOrCreate([
+                            'email' => 'employee@gmail.com',
+                        ], [
+                            'name' => 'employee',
+                            'email' => 'employee@gmail.com',
+                            'password' => Hash::make('12345678'),
+                        ]);
+
+        $employeeUser->assignRole($employeeRole);
     }
 }

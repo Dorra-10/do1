@@ -3,113 +3,57 @@
 namespace App\Http\Controllers;
 
 use App\Models\History;
-use App\Models\Document;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use Carbon\Carbon;
 
 class HistoryController extends Controller
 {
-    /**
-     * Afficher l'historique de tous les documents.
-     *
-     * @return \Illuminate\View\View
-     */
     public function index()
     {
-        // Récupérer tous les historiques des documents
-        $histories = History::all();
+        $user = auth()->user();
 
-        // Retourner la vue avec les historiques
-        return view('history.index', compact('histories'));
-    }
+        $query = History::with([
+                'document:id,name',
+                'modifier:id,name',
+                'viewer:id,name'
+            ])
+            ->select('histories.*')
+            ->selectRaw('
+                GREATEST(
+                    COALESCE(last_viewed_at, 0),
+                    COALESCE(last_modified_at, 0)
+                ) as latest_date
+            ')
+            ->orderByDesc('latest_date');
 
-    /**
-     * Afficher l'historique d'un document spécifique.
-     *
-     * @param int $id
-     * @return \Illuminate\View\View
-     */
-    public function show($id)
-    {
-        // Trouver l'historique du document avec l'ID donné
-        $history = History::where('document_id', $id)->first();
-
-        // Si aucun historique n'est trouvé, on crée un historique pour ce document
-        if (!$history) {
-            $document = Document::findOrFail($id);
-            $history = History::create([
-                'document_id' => $document->id,
-                'document_name' => $document->name,
-            ]);
+        if (!$user->hasRole(['admin', 'superviseur'])) {
+            $query->whereHas('document.accesses', fn($q) => $q->where('user_id', $user->id));
         }
 
-        // Retourner la vue avec l'historique
-        return view('history.show', compact('history'));
+        $histories = $query->get()
+            ->each(function ($history) {
+                $history->formatted_viewed = $history->last_viewed_at 
+                    ? Carbon::parse($history->last_viewed_at)->format('Y-m-d H:i:s')
+                    : 'Jamais consulté';
+                    
+                $history->formatted_modified = $history->last_modified_at
+                    ? Carbon::parse($history->last_modified_at)->format('Y-m-d H:i:s')
+                    : 'Jamais modifié';
+            });
+
+        return view('history.index', [
+            'histories' => $histories,
+            'users' => $this->getUsersForHistories($histories)
+        ]);
     }
 
-    /**
-     * Enregistrer la consultation d'un document.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function view($id)
+    protected function getUsersForHistories($histories)
     {
-        // Trouver le document et son historique
-        $document = Document::findOrFail($id);
-        $history = History::firstOrCreate(
-            ['document_id' => $document->id],
-            ['document_name' => $document->name]
-        );
+        $userIds = $histories->pluck('last_viewed_by')
+            ->merge($histories->pluck('last_modified_by'))
+            ->filter()
+            ->unique();
 
-        // Mettre à jour la date de la dernière consultation
-        $history->last_viewed_at = now();
-        $history->save();
-
-        // Retourner à la page du document ou vers une autre action
-        return redirect()->route('documents.show', $id);
-    }
-
-    /**
-     * Enregistrer une nouvelle version d'un document et mettre à jour son historique.
-     *
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function uploadNewVersion(Request $request, $id)
-    {
-        // Trouver le document et son historique
-        $document = Document::findOrFail($id);
-
-        // Enregistrer le fichier (ajouter ton code pour la gestion du fichier ici)
-
-        // Mettre à jour l'historique
-        $history = History::updateOrCreate(
-            ['document_id' => $document->id],
-            ['document_name' => $document->name]
-        );
-
-        // Mettre à jour les informations de modification
-        $history->last_modified_at = now();
-        $history->last_modified_by = Auth::id(); // ID de l'utilisateur connecté
-        $history->save();
-
-        return redirect()->back()->with('success', 'Nouvelle version uploadée avec succès.');
-    }
-
-    /**
-     * Supprimer un historique spécifique.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function destroy($id)
-    {
-        // Trouver l'historique et le supprimer
-        $history = History::findOrFail($id);
-        $history->delete();
-
-        return redirect()->route('history.index')->with('success', 'Historique supprimé.');
+        return User::whereIn('id', $userIds)->get()->keyBy('id');
     }
 }

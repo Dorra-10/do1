@@ -23,7 +23,7 @@
             Admin
         @elseif (Auth::user()->hasRole('superviseur'))
             Superviseur
-        @elseif (Auth::user()->hasRole('empployee'))
+        @elseif (Auth::user()->hasRole('employee'))
             Employé
         @endif
     </p>

@@ -8,15 +8,15 @@ class AddAccessToDocumentsTable extends Migration
 {
     public function up()
     {
-        // Ajoute la colonne 'access' à la table 'documents'
-        Schema::table('documents', function (Blueprint $table) {
-            $table->string('access')->nullable(); // Type de colonne selon tes besoins (string, text, etc.)
-        });
+        if (!Schema::hasColumn('documents', 'access')) {
+            Schema::table('documents', function (Blueprint $table) {
+                $table->string('access')->nullable();
+            });
+        }
     }
 
     public function down()
     {
-        // Si la migration est annulée, on supprime la colonne 'access'
         Schema::table('documents', function (Blueprint $table) {
             $table->dropColumn('access');
         });

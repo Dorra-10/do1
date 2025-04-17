@@ -16,7 +16,7 @@
                         </a>
                     </li>  
                     
-                    <li class="submenu">
+                    <li >
                         <a href="{{ route('history.index') }}" class="nav-link">
                             <i class="fas fa-history"></i> 
                             <span>History</span>
@@ -35,7 +35,7 @@
                             <span>Documents</span>
                         </a>
                     </li> 
-                    <li class="submenu">
+                    <li >
                         <a href="{{ route('history.index') }}" class="nav-link">
                             <i class="fas fa-history"></i> 
                             <span>History</span>
