@@ -24,6 +24,13 @@ class DocumentController extends Controller
     
         // Documents query
         $documentsQuery = Document::query();
+        $filetypes = [
+            1 => 'pdf',
+            2 => 'docx',
+            3 => 'pptx',
+            4 => 'xls',
+            5 => 'catia',
+        ];
         
         if ($user->hasRole(['admin', 'superviseur'])) {
             // Tous les documents pour admin/superviseur
@@ -56,39 +63,67 @@ class DocumentController extends Controller
                                    ->orderBy('date_added', 'desc')
                                    ->paginate(10);
     
-        return view('documents.index', compact('documents', 'projects', 'searchTerm'));
+        return view('documents.index', compact('documents', 'projects', 'searchTerm','filetypes'));
     }
 
-    public function upload(Request $request){
-        $request->validate([
-            'document' => 'required|file|mimes:pdf,docx,pptx,xlsx,xls|max:20480',
-            'project_id' => 'required|exists:projects,id',
-            'name' => 'required|string|max:255',
-        ]);
+   
+    public function upload(Request $request)
+{
+    // Validation des données
+    $request->validate([
+        'document' => 'required|file|mimes:pdf,docx,pptx,xlsx,xls|max:20480',
+        'project_id' => 'required|exists:projects,id',
+        'name' => 'required|string|max:255',
+        'access' => 'nullable|string|max:255',
+        'owner' => 'nullable|string|max:255',
+        'company' => 'nullable|string|max:255',
+        'description' => 'nullable|string',
+    ]);
 
-        if ($request->hasFile('document')) {
-            $file = $request->file('document');
-            $fileName = $request->name . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('documents', $fileName, 'public');
+    // Vérification si un fichier est présent
+    if ($request->hasFile('document')) {
+        $file = $request->file('document');
+        $fileExtension = $file->getClientOriginalExtension();  // Extension du fichier
+        $fileName = $request->name . '.' . $fileExtension;
 
-            $document = Document::create([
-                'name' => $request->name,
-                'file_type' => $file->getClientOriginalExtension(),
-                'project_id' => $request->project_id,
-                'path' => $path,
-                'access' => $request->access,
-                'date_added' => now(),
-            ]);
-            
-            History::recordAction($document->id, 'modify', auth()->id());
-            
+        // Stockage du fichier dans le dossier public
+        $path = $file->storeAs('documents', $fileName, 'public');
 
-            return redirect()->route('documents.index')->with('success', 'Document ajouté avec succès');
+        // Définir un type de fichier basé sur l'extension
+        $fileType = match ($fileExtension) {
+            'pdf' => 1,
+            'docx' => 2,
+            'pptx' => 3,
+            'xlsx', 'xls' => 4,
+            default => null,
+        };
+
+        if (!$fileType) {
+            return redirect()->back()->with('error', 'Type de fichier non valide');
         }
 
-        return redirect()->back()->with('error', 'Erreur lors de l\'ajout du document');
+        // Création du document avec les informations validées
+        $document = Document::create([
+            'name' => $request->name,
+            'type_id' => $fileType,
+            'file_type' => $fileExtension,
+            'project_id' => $request->project_id,
+            'path' => $path,
+            'owner' => $request->owner,
+            'company' => $request->company,
+            'description' => $request->description,
+        ]);
+
+        // Enregistrement dans l'historique
+        History::recordAction($document->id, 'modify', auth()->id());
+
+        return redirect()->route('documents.index')->with('success', 'Document ajouté avec succès');
     }
 
+    return redirect()->back()->with('error', 'Erreur lors de l\'ajout du document');
+}
+
+    
 
     public function download($id)
    {
@@ -125,38 +160,70 @@ class DocumentController extends Controller
     // Télécharger le fichier avec son nom d'origine et son extension
     return Storage::disk('public')->download($filePath, $document->name . '.' . $extension);
    }
+   
+   public function edit($id)
+   {
+       // Récupère le document à éditer
+       $editdocument = Document::findOrFail($id);
+   
+       // Récupère tous les projets pour les afficher dans la liste déroulante
+       $projects = Project::all();
+   
+       // Liste des types de fichiers valides
+       $filetypes = [1 => 'pdf', 2 => 'docx', 3 => 'pptx', 4 => 'xls', 5 => 'catia'];
+   
+       // Passe les variables à la vue
+       return view('documents.index', [
+        'editDocument' => $document, // ← changement ici
+        'projects' => $projects,
+        'filetypes' => $filetypes,
+    ]);
+    
+   }
+   
+   public function update(Request $request, Document $document)
+{
+    // 1. Valider tous les champs du formulaire
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'project_id' => 'required|exists:projects,id',
+        'owner' => 'required|string|max:255',
+        'company' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'date_added' => 'required|date',
+        'file' => 'nullable|file|mimes:pdf,docx,pptx,xlsx|max:10240', // seulement si vous avez un champ file
+    ]);
 
-    public function update(Request $request, Document $document)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'access' => 'nullable|string',
-            'file' => 'nullable|file|mimes:pdf,docx,pptx,xlsx|max:10240',
-        ]);
-
-        $filePath = $document->path;
-        $file_type = $document->file_type;
-
-        if ($request->hasFile('file')) {
-            if (Storage::disk('public')->exists($document->path)) {
-                Storage::disk('public')->delete($document->path);
-            }
-
-            $file = $request->file('file');
-            $filePath = $file->storeAs('documents', time() . '_' . $file->getClientOriginalName(), 'public');
-            $file_type = $file->getClientOriginalExtension();
+    // 2. Gestion du fichier (uniquement si vous avez ce champ)
+    $fileData = [];
+    if ($request->hasFile('file')) {
+        // Supprimer l'ancien fichier
+        if (Storage::disk('public')->exists($document->path)) {
+            Storage::disk('public')->delete($document->path);
         }
 
-        $document->update([
-            'name' => $request->input('name'),
-            'access' => $request->input('access'),
+        // Stocker le nouveau fichier
+        $file = $request->file('file');
+        $filePath = $file->storeAs('documents', time() . '_' . $file->getClientOriginalName(), 'public');
+        
+        $fileData = [
             'path' => $filePath,
-            'file_type' => $file_type,
-        ]);
-
-        return redirect()->route('documents.index')->with('success', 'Document mis à jour avec succès');
+            'file_type' => $file->getClientOriginalExtension(),
+        ];
     }
-   
+
+    // 3. Mettre à jour tous les champs
+    $document->update(array_merge([
+        'name' => $validated['name'],
+        'project_id' => $validated['project_id'],
+        'owner' => $validated['owner'],
+        'company' => $validated['company'],
+        'description' => $validated['description'],
+        'date_added' => $validated['date_added'],
+    ], $fileData));
+
+    return redirect()->route('documents.index')->with('success', 'Document updated successfully!');
+}
     public function revision(Request $request, $id)
 {
     DB::beginTransaction();
@@ -255,22 +322,37 @@ class DocumentController extends Controller
     }
 }
 
+public function destroy($id)
+{
+    // Trouver le document dans la base de données
+    $document = Document::findOrFail($id);
 
-    public function destroy($id)
-    {
-        $document = Document::findOrFail($id);
-        $filePath = storage_path('app/public/' . $document->path);
-
-        if (file_exists($filePath)) {
-            unlink($filePath);
-        } elseif (Storage::disk('public')->exists($document->path)) {
+    try {
+        // Supprimer le fichier du stockage (si il existe)
+        if (Storage::disk('public')->exists($document->path)) {
             Storage::disk('public')->delete($document->path);
+        } else {
+            return redirect()->route('documents.index')->with('error', 'Le fichier n\'existe pas sur le disque');
         }
 
-        $document->delete();
+        // Utiliser forceDelete pour une suppression définitive (si SoftDeletes est activé)
+        $document->forceDelete();
 
-        return redirect()->route('documents.index')->with('status', 'Document supprimé avec succès !');
+        // Retourner un message de succès
+        return redirect()->route('documents.index')->with('status', 'Documents deleted successfully !');
+        
+    } catch (\Exception $e) {
+        // Gestion des erreurs
+        return redirect()->route('documents.index')->with('error', 'Erreur lors de la suppression du document: ' . $e->getMessage());
     }
-
-
 }
+
+
+
+    
+}
+
+
+
+
+

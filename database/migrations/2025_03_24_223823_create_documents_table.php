@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('file');
             $table->timestamp('date_added')->useCurrent(); // Utilise la date et l'heure actuelle par défaut
             $table->string('access')->nullable(); // Le champ "access" est nullable
+            $table->unsignedBigInteger('type_id')->nullable()->after('file_type');
             $table->timestamps();
         });
     }

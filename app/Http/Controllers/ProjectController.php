@@ -22,7 +22,9 @@ class ProjectController extends Controller
         Project::create($validatedData);
 
         return redirect()->route('projects.index')
-                         ->with('success', 'Projet ajouté avec succès !');
+                         ->with('success', 'Project created successfully !');
+        
+       
     }
     public function show($id)
     {
@@ -80,13 +82,13 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Projet mis à jour avec succès !', 'project' => $project]);
         }
 
-        return redirect()->route('projects.index')->with('success', 'Projet mis à jour avec succès !');
+        return redirect()->route('projects.index')->with('success', 'Project updated successfully !');
     }
 
     public function destroy(Project $project)
     {
         $project->delete();
-        return redirect()->route('projects.index')->with('success', 'Projet supprimé avec succès !');
+        return redirect()->route('projects.index')->with('success', 'Project deleted successfully !');
     }
 
     public function search(Request $request)

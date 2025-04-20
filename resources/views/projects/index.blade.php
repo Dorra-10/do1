@@ -1,6 +1,30 @@
 @extends('layouts.app')
 
 @section('content')
+@if (session('success'))
+        <div id="success-message" style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color:rgb(86, 109, 103);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 9999;
+        ">
+            {{ session('success') }}
+        </div>
+
+        <script>
+            setTimeout(function() {
+                var message = document.getElementById('success-message');
+                if (message) {
+                    message.style.display = 'none';
+                }
+            }, 2000);
+        </script>
+    @endif
 <div class="page-wrapper">
     <!-- Page Content -->
     <div class="content container-fluid">
@@ -149,7 +173,7 @@
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                                 <button type="submit" class="btn btn-primary">Save</button>
                             </div>
-                        </form>
+                             </form>
                     </div>
                 </div>
             </div>
@@ -234,85 +258,51 @@
 
 
 <script>
-    $(document).ready(function() {
-        // Gestion des messages de succès
-        if ($('#successMessage').length) {
-            setTimeout(function() {
-                $('#successMessage').fadeOut('slow', function() {
-                    $(this).remove();
-                });
-            }, 2000);
-        }
 
-        // Delete button click event
-        $('.delete-document-btn').click(function() {
-            const documentId = $(this).data('id');
-            // Mettre à jour l'action du formulaire de suppression dynamiquement
-            $('#deleteForm').attr('action', '{{ route("documents.destroy", ":id") }}'.replace(':id', documentId));
+$(document).ready(function() {
+
+// ✅ Gestion des messages de succès
+if ($('#successMessage').length) {
+    setTimeout(function() {
+        $('#successMessage').fadeOut('slow', function() {
+            $(this).remove();
         });
-    });
-</script>
+    }, 3000); // 3 secondes (tu peux remettre 2000 si tu veux)
+}
 
-
-<script>
-$(document).ready(function() {
-    // Lorsque vous cliquez sur le lien d'édition d'un projet
-    $('.edit-project-btn').click(function() {
-        // Récupérer les données du projet depuis les attributs 'data'
-        const projectId = $(this).data('id');
-        const name = $(this).data('name');
-        const type = $(this).data('type');
-        const dateAdded = $(this).data('date_added');
-
-        // Mettre à jour l'action du formulaire avec l'ID du projet
-        const editUrl = '{{ route("projects.update", ":id") }}'.replace(':id', projectId);
-        $('#editProjectForm').attr('action', editUrl);
-
-        // Remplir les champs du formulaire avec les données du projet
-        $('#editName').val(name);
-        $('#editType').val(type);
-        
-        $('#editDate').val(dateAdded);
-
-        // Afficher la modal
-        $('#editProjectModal').modal('show');
-    });
+// ✅ Gestion du bouton de suppression de document
+$('.delete-document-btn').click(function() {
+    const documentId = $(this).data('id');
+    const deleteUrl = '{{ route("documents.destroy", ":id") }}'.replace(':id', documentId);
+    $('#deleteForm').attr('action', deleteUrl);
 });
-$(document).ready(function() {
-    // Auto-hide success message
-    if ($('#successMessage').length) {
-        setTimeout(function() {
-            $('#successMessage').fadeOut('slow');
-        }, 3000);
-    }
 
-    // Edit project modal handling
-    $('.edit-project-btn').click(function() {
-        const projectId = $(this).data('id');
-        const name = $(this).data('name');
-        const type = $(this).data('type');
-        let dateAdded = $(this).data('date_added');
-        
-        // Format date for date input
-        if (dateAdded) {
-            const dateObj = new Date(dateAdded);
-            if (!isNaN(dateObj)) {
-                dateAdded = dateObj.toISOString().split('T')[0];
-            }
-        }
-        
-        $('#editProjectForm').attr('action', '{{ route("projects.update", ":id") }}'.replace(':id', projectId));
-        $('#editName').val(name);
-        $('#editType').val(type);
-        $('#editDate').val(dateAdded);
-    });
+// ✅ Gestion du bouton de modification de projet
+$('.edit-project-btn').click(function() {
+    const projectId = $(this).data('id');
+    const name = $(this).data('name');
+    const type = $(this).data('type');
+    const dateAdded = $(this).data('date_added');
 
-    // Delete confirmation handling
-    $('.delete-project-btn').click(function() {
-        const projectId = $(this).data('id');
-        // Vous pouvez ajouter un traitement spécifique si nécessaire
-    });
+    const editUrl = '{{ route("projects.update", ":id") }}'.replace(':id', projectId);
+    $('#editProjectForm').attr('action', editUrl);
+
+    $('#editName').val(name);
+    $('#editType').val(type);
+    $('#editDate').val(dateAdded);
+
+    $('#editProjectModal').modal('show');
 });
+
+// ✅ (optionnel) Confirmation ou logique personnalisée pour suppression de projet
+$('.delete-project-btn').click(function() {
+    const projectId = $(this).data('id');
+    // Traitement ou confirmation si besoin
+    console.log("Projet à supprimer ID :", projectId);
+});
+
+});
+
 </script>
 
 
