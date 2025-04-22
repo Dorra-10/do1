@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\Document;
 use App\Models\Project;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 use App\Models\Access;
 use App\Models\History;
-
+use App\Models\Export;
 
 class DocumentController extends Controller
 {
@@ -21,7 +22,7 @@ class DocumentController extends Controller
     {
         $user = auth()->user();
         $searchTerm = $request->input('search', '');
-    
+        $documents = Document::all();
         // Documents query
         $documentsQuery = Document::query();
         $filetypes = [
@@ -65,7 +66,44 @@ class DocumentController extends Controller
     
         return view('documents.index', compact('documents', 'projects', 'searchTerm','filetypes'));
     }
-
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'file' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr|max:20480',
+            'project_id' => 'required|exists:projects,id',
+            'description' => 'nullable|string',
+            'is_locked' => 'nullable|boolean'
+        ]);
+    
+        DB::beginTransaction();
+    
+        try {
+            $file = $request->file('file');
+            $path = $file->store('documents', 'public');
+    
+            $document = Document::create([
+                'name' => $request->name,
+                'path' => $path,
+                'file_type' => $file->extension(),
+                'project_id' => $request->project_id,
+                'owner' => auth()->id(),
+                'company' => $request->company,
+                'description' => $request->description,
+                'is_locked' => $request->is_locked ?? false,
+                'date_added' => now()
+            ]);
+    
+            DB::commit();
+    
+            return redirect()->route('documents.index')
+                           ->with('success', 'Document créé avec succès');
+    
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Erreur lors de la création: ' . $e->getMessage());
+        }
+    }
    
     public function upload(Request $request)
 {
@@ -224,103 +262,113 @@ class DocumentController extends Controller
 
     return redirect()->route('documents.index')->with('success', 'Document updated successfully!');
 }
-    public function revision(Request $request, $id)
+
+
+
+public function revision(Request $request, $id)
 {
     DB::beginTransaction();
 
     try {
-        // Récupérer le document par son ID
         $document = Document::find($id);
         if (!$document) {
             return redirect()->back()->with('error', "Document introuvable.");
         }
 
-        // Récupérer l'utilisateur actuellement connecté
         $user = auth()->user();
 
-        // Vérification des permissions d'accès au document
         $hasWriteAccess = $document->accesses()
             ->where('user_id', $user->id)
             ->where('permission', 'write')
             ->exists();
 
-        // Vérifier si l'utilisateur est admin, superviseur ou s'il a les permissions en écriture
         if (! $user->hasRole(['admin', 'superviseur']) && !$hasWriteAccess) {
             return redirect()->back()->with('error', "Vous n'avez pas les permissions pour modifier ce document.");
         }
 
-        // Récupérer le chemin, le nom et l'extension du document original
-        $oldPath = $document->path;
-        $oldName = pathinfo($oldPath, PATHINFO_FILENAME);
-        $oldExtension = pathinfo($oldPath, PATHINFO_EXTENSION);
-
-        // Validation du fichier envoyé dans la requête
+        // ✅ D'abord récupérer le fichier
         $request->validate([
             'file' => 'required|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr|max:20480',
         ]);
 
-        // Récupérer le fichier et ses informations
         $file = $request->file('file');
-        $newName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $newExtension = $file->getClientOriginalExtension();
 
-        // Vérifier si le nom et l'extension correspondent au fichier original
-        if ($newName !== pathinfo($document->name, PATHINFO_FILENAME) || $newExtension !== $document->file_type) {
-            return redirect()->back()->with('error', "Le fichier doit avoir le même nom et le même type que le fichier original.");
+        $oldName = strtolower(trim($document->name));
+        $newName = strtolower(trim($file->getClientOriginalName()));
+
+        // ✅ Comparer les noms complets avec extension
+        if ($oldName !== $newName) {
+            return redirect()->back()->with('error', "Le nom du fichier doit être exactement le même que l'ancien : '{$document->name}'.");
         }
 
-        // Supprimer l'ancien fichier du stockage, s'il existe
+        $extension = $file->getClientOriginalExtension();
+
+        if ($extension !== $document->file_type) {
+            return redirect()->back()->with('error', "Le type de fichier doit être le même que l'ancien : '{$document->file_type}'.");
+        }
+
+        $oldPath = $document->path;
+
+        // 🔥 Supprimer l'ancien fichier s'il existe
         if ($oldPath && Storage::disk('public')->exists($oldPath)) {
             Storage::disk('public')->delete($oldPath);
         }
 
-        // Générer un nouveau chemin pour le fichier et le sauvegarder
-        $newStoragePath = 'documents/' . time() . '.' . $newExtension;
+        // 📥 Stocker le nouveau fichier
+        $newStoragePath = 'documents/' . time() . '.' . $extension;
         Storage::disk('public')->put($newStoragePath, file_get_contents($file->getRealPath()));
 
-        // Vérifier si le fichier a bien été sauvegardé
         if (!Storage::disk('public')->exists($newStoragePath)) {
             throw new \Exception("Le fichier n'a pas pu être enregistré.");
         }
 
-        // Mettre à jour le document dans la base de données
+        // 📝 Mettre à jour le document
         $document->update([
             'name' => $file->getClientOriginalName(),
-            'file_type' => $newExtension,
+            'file_type' => $extension,
             'path' => $newStoragePath,
             'updated_at' => now(),
         ]);
 
-        // Enregistrer l'action de modification dans l'historique
         History::recordAction($document->id, 'modify', auth()->id());
 
-        // Mettre à jour l'historique de modification
+        // 🕒 Historique
         $history = History::firstOrNew(['document_id' => $document->id]);
         $history->document_name = $document->name;
         $history->last_modified_at = now();
         $history->last_modified_by = $user->id;
         $history->save();
 
-        // Commit des transactions
         DB::commit();
 
-        // Effacer le cache pour que les changements soient pris en compte
         clearstatcache();
         if (function_exists('opcache_reset')) {
             opcache_reset();
         }
 
-        // Retourner un message de succès
         return redirect()->back()->with('success', 'Fichier mis à jour avec succès.');
 
     } catch (\Exception $e) {
-        // Rollback en cas d'erreur et log de l'exception
         DB::rollBack();
-        Log::error('Erreur lors de la mise à jour du fichier : ' . $e->getMessage());
-        return redirect()->back()->with('error', "Le fichier doit avoir le même nom et le même type que le fichier original.");
-
+        return redirect()->back()->with('error', 'Échec de la mise à jour: ' . $e->getMessage());
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 public function destroy($id)
 {
@@ -346,6 +394,38 @@ public function destroy($id)
         return redirect()->route('documents.index')->with('error', 'Erreur lors de la suppression du document: ' . $e->getMessage());
     }
 }
+
+
+
+public function lock(Request $request, $id)
+{
+    $document = Document::findOrFail($id);
+
+    $document->is_locked = true;
+    $document->save();
+
+    Export::create([
+        'name' => $document->name,
+        'file_type' => $document->file_type,
+        'project_id' => $document->project_id,
+        'path' => $document->path,
+        'date_added' => now(),
+        'owner' => $document->owner,
+        'company' => $document->company,
+        'description' => $document->description,
+    ]);
+
+    // Réponse JSON pour les appels JS
+    if ($request->expectsJson()) {
+        return response()->json(['success' => true]);
+    }
+
+    // Fallback classique
+    return redirect()->back()->with('success', 'Document verrouillé et exporté avec succès.');
+}
+
+
+
 
 
 

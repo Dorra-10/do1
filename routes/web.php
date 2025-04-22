@@ -8,6 +8,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\AccessController;
 use App\Http\Controllers\HistoryController;
+use App\Http\Controllers\ExportController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +55,10 @@ Route::group(['middleware' => ['role:admin']], function () {
     Route::put('documents/{document}', [DocumentController::class, 'update'])->name('documents.update');  // Mettre à jour un document
     // Supprimer un document
     Route::delete('documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+     //Impo/Expo
+     Route::get('/export', [ExportController::class, 'index'])->name('impoexpo.expo.index');
+     Route::post('/documents/{id}/lock', [DocumentController::class, 'lock'])->name('documents.lock');
+     Route::get('exports/{id}/download', [ExportController::class, 'download'])->name('exports.download');
 
 });
 
@@ -66,8 +71,8 @@ Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], func
     Route::post('documents/{id}/revision', [DocumentController::class, 'revision'])->name('documents.revision');
     
     Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
-    Route::resource('documents', DocumentController::class);
-    Route::resource('documents', DocumentController::class)->except(['index', 'store']);
+    Route::resource('documents', DocumentController::class)->except(['show']);
+
     
 
     Route::post('/documents/store', [DocumentController::class, 'store'])->name('documents.store');

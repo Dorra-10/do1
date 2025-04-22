@@ -174,83 +174,90 @@ class ProjectController extends Controller
         DB::beginTransaction();
     
         try {
-            // Affichage de l'ID dans la requête
-            Log::info("ID reçu dans la requête : $id");
-    
-            // Récupération du document par ID
             $document = Document::find($id);
-            
-            // Vérification que le document existe bien
             if (!$document) {
-                Log::error("Document ID $id introuvable.");
                 return redirect()->back()->with('error', "Document introuvable.");
             }
     
-            // Affichage de l'ID du document dans la base de données
-            Log::info("Tentative de mise à jour du document avec l'ID : $document->id");
+            $user = auth()->user();
     
-            // Récupérer l'ancien chemin du fichier
-            $oldPath = $document->path;
-            Log::info("Ancien chemin du fichier : $oldPath");
+            $hasWriteAccess = $document->accesses()
+                ->where('user_id', $user->id)
+                ->where('permission', 'write')
+                ->exists();
     
-            // Validation du fichier
+            if (! $user->hasRole(['admin', 'superviseur']) && !$hasWriteAccess) {
+                return redirect()->back()->with('error', "Vous n'avez pas les permissions pour modifier ce document.");
+            }
+    
+            // ✅ D'abord récupérer le fichier
             $request->validate([
                 'file' => 'required|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr|max:20480',
             ]);
     
             $file = $request->file('file');
+    
+            $oldName = strtolower(trim($document->name));
+            $newName = strtolower(trim($file->getClientOriginalName()));
+    
+            // ✅ Comparer les noms complets avec extension
+            if ($oldName !== $newName) {
+                return redirect()->back()->with('error', "Le nom du fichier doit être exactement le même que l'ancien : '{$document->name}'.");
+            }
+    
             $extension = $file->getClientOriginalExtension();
     
-            // Vérification que le document a un chemin valide
-            if (!$oldPath) {
-                throw new \Exception("Le document ne possède pas de chemin de fichier valide.");
+            if ($extension !== $document->file_type) {
+                return redirect()->back()->with('error', "Le type de fichier doit être le même que l'ancien : '{$document->file_type}'.");
             }
     
-            // Vérifier si le fichier existe avant de tenter de le supprimer
+            $oldPath = $document->path;
+    
+            // 🔥 Supprimer l'ancien fichier s'il existe
             if ($oldPath && Storage::disk('public')->exists($oldPath)) {
-                Log::info("Le fichier existe, suppression en cours : $oldPath");
                 Storage::disk('public')->delete($oldPath);
-                Log::info("Ancien fichier supprimé : $oldPath");
-            } else {
-                Log::error("Fichier introuvable : $oldPath");
             }
     
-            // Enregistrer le fichier sous un nouveau chemin (ou le même si tu veux écraser)
-            $newStoragePath = 'documents/' . time() . '.' . $extension; // Créer un nouveau nom de fichier unique
+            // 📥 Stocker le nouveau fichier
+            $newStoragePath = 'documents/' . time() . '.' . $extension;
             Storage::disk('public')->put($newStoragePath, file_get_contents($file->getRealPath()));
     
-            // Vérifier si le fichier est bien stocké
             if (!Storage::disk('public')->exists($newStoragePath)) {
                 throw new \Exception("Le fichier n'a pas pu être enregistré.");
             }
     
-            // Mise à jour de la base de données avec le nouveau chemin
+            // 📝 Mettre à jour le document
             $document->update([
                 'name' => $file->getClientOriginalName(),
                 'file_type' => $extension,
-                'path' => $newStoragePath, // Mettre à jour le chemin pour que ce soit celui du nouveau fichier
+                'path' => $newStoragePath,
                 'updated_at' => now(),
             ]);
     
+            History::recordAction($document->id, 'modify', auth()->id());
+    
+            // 🕒 Historique
+            $history = History::firstOrNew(['document_id' => $document->id]);
+            $history->document_name = $document->name;
+            $history->last_modified_at = now();
+            $history->last_modified_by = $user->id;
+            $history->save();
+    
             DB::commit();
     
-            // Nettoyage du cache
             clearstatcache();
             if (function_exists('opcache_reset')) {
                 opcache_reset();
             }
     
-            Log::info("Fichier mis à jour avec succès : $newStoragePath");
-    
             return redirect()->back()->with('success', 'Fichier mis à jour avec succès.');
     
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Erreur lors de la mise à jour du fichier : " . $e->getMessage());
-    
             return redirect()->back()->with('error', 'Échec de la mise à jour: ' . $e->getMessage());
         }
     }
+
     
 
     public function deleteDocument($projectId, $documentId)

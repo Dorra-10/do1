@@ -1,6 +1,30 @@
 @extends('layouts.app')
 
 @section('content')
+@if (session('success'))
+        <div id="success-message" style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color:rgb(86, 109, 103);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 9999;
+        ">
+            {{ session('success') }}
+        </div>
+
+        <script>
+            setTimeout(function() {
+                var message = document.getElementById('success-message');
+                if (message) {
+                    message.style.display = 'none';
+                }
+            }, 2000);
+        </script>
+    @endif
 <div class="page-wrapper">
     <div class="content container-fluid">
         <div class="page-header">
@@ -20,81 +44,154 @@
                         <div class="table-responsive">
                             <table class="datatable table table-stripped table-hover table-center mb-0">
                                 <thead>
-                                    <tr>
+                                <tr>
                                         <th> ID</th>
                                         <th>Name</th>
-                                        <th>Type</th>
+                                        <th>Project ID</th>
+                                        <th>Owner</th>
+                                        <th>Company</th>
                                         <th>Date</th>
+                                        <th>Description</th>
                                         <th class="text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                @foreach($documents as $document)
-                                <tr>
-                                    <td>{{ $document->id }}</td>
-                                    <td>
-                                            {{ $document->name }}
-                                        
-                                    </td>
-                                    <td>{{ $document->file_type }}</td>
-                                   
-                                    <td>{{ $document->updated_at->format('d/m/Y H:i') }}</td>
-                                    
-                                    <td class="text-right">
-                                    @can('update document')
-                                        <a href="#" class="edit-document-btn" data-id="{{ $document->id }}"
-                                           data-name="{{ $document->name }}"
-                                           data-file_type="{{ $document->file_type }}"
-                                           data-project_id="{{ $document->project_id }}"
-                                           data-access="{{ $document->access }}"
-                                           data-date_added="{{ $document->date_added }}"
-                                           data-toggle="modal" data-target="#editDocumentModal">
-                                           <i class="fas fa-pencil-alt m-r-5"></i>
-                                        </a>
-                                        @endcan('update document')
-                                        @can('delete project')
-                                        <a href="#" class="delete-document-btn" data-id="{{ $document->id }}" data-toggle="modal" data-target="#delete_modal">
-                                            <i class="fas fa-trash-alt m-r-5"></i>
-                                        </a>
-                                        @endcan
-                                        @php
-                                        $user = auth()->user();
-                                        
-                                        // Vérification si l'utilisateur a un accès en écriture (write) sur ce document
-                                        $hasWriteAccess = $document->accesses
-                                            ->where('user_id', $user->id)
-                                            ->where('permission', 'write')
-                                            ->isNotEmpty();
+                                    @forelse($documents as $document)
+                                        <tr>
+                                            <td>{{ $document->id }}</td>
+                                            <td>{{ $document->name }}</td>
+                                            <td>{{ $document->project_id }}</td>
+                                            <td>{{ $document->owner }}</td>
+                                            <td>{{ $document->company }}</td>
+                                            <td>{{ $document->updated_at->format('d/m/Y H:i') }}</td>
+                                            <td>
+                                            <span class="description-preview">
+                                                    {{ Str::limit($document->description, 10) }} <!-- Limite à 50 caractères -->
+                                                </span>
+                                                
+                                                @if(strlen($document->description) > 10)
+                                                <button class="btn btn-sm btn-link view-full-description" 
+                                                        data-description="{{ $document->description }}">
+                                                    See More
+                                                </button>
+                                                @endif
+                                            </td>
+                                            <td class="text-right">
+                                                {{-- Bouton de modification --}}
+                                                @can('update document')
+                                                    <a href="#" class="edit-document-btn  {{ $document->is_locked ? 'locked' : '' }}"
+                                                        data-id="{{ $document->id }}"
+                                                        data-name="{{ $document->name }}"
+                                                        data-project_id="{{ $document->project_id }}"
+                                                        data-owner="{{ $document->owner }}"
+                                                        data-company="{{ $document->company }}"
+                                                        data-description="{{ $document->description }}"
+                                                        data-date_added="{{ $document->date_added }}"
+                                                        data-toggle="modal"
+                                                        data-target="#editDocumentModal">
+                                                        <i class="fas fa-pencil-alt"></i>
+                                                    </a>
+                                                @endcan
 
-                                        // Vérification si l'utilisateur a un accès en lecture (read) sur ce document
-                                        $hasReadAccess = $document->accesses
-                                            ->where('user_id', $user->id)
-                                            ->where('permission', 'read')
-                                            ->isNotEmpty();
-                                    @endphp
+                                                @php
+                                                    $user = auth()->user();
 
-                                    {{-- Icône de téléchargement - visible uniquement si admin/superviseur ou write ou read--}}
-                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess || $hasReadAccess )
-                                        <a href="{{ route('documents.download', $document->id) }}" class="download-document-btn">
-                                            <i class="fas fa-download m-r-5"></i> 
-                                        </a>
-                                    @endif
+                                                    $hasWriteAccess = $document->accesses
+                                                        ->where('user_id', $user->id)
+                                                        ->where('permission', 'write')
+                                                        ->isNotEmpty();
 
-                                    {{-- Icône de révision - visible uniquement si admin/superviseur ou write --}}
-                                    @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
-                                        <a href="{{ route('documents.revision', $document->id) }}" class="revision-document-btn" 
-                                        data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
-                                            <i class="fas fa-edit m-r-5"></i> 
-                                        </a>
-                                    @endif
-                                
-                                </tr>
-                                @endforeach
-                                @if($documents->isEmpty())
-                                    <tr>
-                                        <td colspan="7" class="text-center">Aucun document trouvé.</td>
-                                    </tr>
-                                @endif
+                                                    $hasReadAccess = $document->accesses
+                                                        ->where('user_id', $user->id)
+                                                        ->where('permission', 'read')
+                                                        ->isNotEmpty();
+
+                                                    $isLocked = $document->is_locked;
+                                                @endphp
+
+                                                {{-- Bouton de suppression --}}
+                                                @can('delete document')
+                                                    <a 
+                                                        href="{{ $isLocked ? '#' : route('documents.destroy', $document->id) }}"
+                                                        class="delete-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
+                                                        onclick="{{ $isLocked ? 'return false;' : '' }}"
+                                                        style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
+                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Supprimer' }}"
+                                                    >
+                                                        <i class="fas fa-trash m-r-5"></i>
+                                                    </a>
+                                                @endcan
+
+                                                {{-- Icône de téléchargement --}}
+                                                @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess || $hasReadAccess)
+                                                    <a 
+                                                        href="{{ $isLocked ? '#' : route('documents.download', $document->id) }}" 
+                                                        class="download-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
+                                                        style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
+                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Télécharger' }}"
+                                                    >
+                                                        <i class="fas fa-download m-r-5"></i>
+                                                    </a>
+                                                @endif
+
+                                                {{-- Icône de révision --}}
+                                                @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
+                                                    <a href="{{ $isLocked ? '#' : route('documents.revision', $document->id) }}"
+                                                    class="revision-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
+                                                    style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
+                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Télécharger' }}"
+                                                    data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
+                                                        <i class="fas fa-edit m-r-5"></i> 
+                                                    </a>
+                                                @endif
+
+
+                                                  <!-- Icône de verrouillage -->
+                                                  @if ($user->hasRole('admin'))
+                                                  <a href="#" 
+                                                    class="lock-document-btn {{ $document->is_locked ? 'locked' : '' }}" 
+                                                    title="{{ $document->is_locked ? 'Déjà verrouillé' : 'Verrouiller ce document' }}"
+                                                    data-locked="{{ $document->is_locked ? 'true' : 'false' }}"
+                                                    onclick="{{ !$document->is_locked ? 'openLockModal('.$document->id.')' : 'return false;' }}"
+                                                    id="lock-icon-{{ $document->id }}">
+                                                    <i class="fas {{ $document->is_locked ? 'fa-lock' : 'fa-unlock' }} m-r-5"></i>
+                                                    </a>
+
+                                                @endif
+
+                                                <!-- Formulaire caché -->
+                                                <form id="lock-form-{{ $document->id }}" 
+                                                    action="{{ route('documents.lock', $document->id) }}" 
+                                                    method="POST" 
+                                                    style="display: none;">
+                                                    @csrf
+                                                </form>
+
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center">
+                                                @if (!empty($searchTerm))
+                                                    <div class="alert alert-info">
+                                                        <i class="fas fa-search"></i> No documents found for "{{ $searchTerm }}"
+                                                    </div>
+                                                    <a href="{{ route('documents.index') }}" class="btn btn-sm btn-outline-primary">
+                                                        Show all documents
+                                                    </a>
+                                                @else
+                                                    <div class="alert alert-info">
+                                                        <i class="fas fa-info-circle"></i> No documents available
+                                                    </div>
+                                                    @can('upload document')
+                                                        <a href="#" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addDocumentModal">
+                                                            <i class="fas fa-plus"></i> Add document
+                                                        </a>
+                                                    @endcan
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>
@@ -261,6 +358,49 @@
     </div>
 </div>
 
+<!-- Modal pour afficher la description complète -->
+<div class="modal fade" id="descriptionModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Description</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="fullDescriptionContent">
+                <!-- Le contenu sera inséré ici par JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Export confirmation -->
+<div class="modal fade" id="lockModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmer le verrouillage</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        Êtes-vous sûr de vouloir verrouiller ce document ?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Non</button>
+        <button type="button" class="btn btn-primary" id="confirmLockBtn">Oui</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- Modal Révision Document -->
 
 <div class="modal fade" id="revisionModal" tabindex="-1" role="dialog" aria-labelledby="revisionModalLabel" aria-hidden="true">
@@ -287,26 +427,72 @@
         </div>
     </div>
 </div>
+
+
+
+
 <script>
-    $(document).ready(function() {
-        // Edit document modal
-        $('.edit-document-btn').click(function() {
-            var doc = $(this).data();
-            $('#editDocumentModal form').attr('action', '/documents/' + doc.id); // Update form action with the document ID
-            $('#editName').val(doc.name);
-            $('#editFileType').val(doc.file_type);
-            $('#editProjectId').val(doc.project_id);
-            $('#editAccess').val(doc.access);
-            $('#editDate').val(doc.date_added);
+    document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.edit-document-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const id = this.dataset.id;
+            const name = this.dataset.name;
+            const projectId = this.dataset.projectId || this.dataset.project_id; // les deux formats possibles
+            const dateAdded = this.dataset.dateAdded || this.dataset.date_added;
+            const owner = this.dataset.owner || '';
+            const company = this.dataset.company || '';
+            const description = this.dataset.description || '';
+
+            // Remplir les champs
+            document.getElementById('editName').value = name;
+            document.getElementById('editOwner').value = owner;
+            document.getElementById('editCompany').value = company;
+            document.getElementById('editDescription').value = description; // Pour textarea, on utilise .value
+
+            // Projet
+            if (projectId) {
+                document.getElementById('editProjectId').value = projectId;
+            }
+
+            // Date - format YYYY-MM-DD
+            if (dateAdded) {
+                const dateObj = new Date(dateAdded);
+                const formattedDate = dateObj.toISOString().split('T')[0];
+                document.getElementById('editDate').value = formattedDate;
+            }
+
+            // Mettre à jour l'action du formulaire
+            document.getElementById('editDocumentForm').action = `/documents/${id}`;
+            
+            // Ouvrir le modal
+            $('#editDocumentModal').modal('show');
         });
+    });
+});
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du clic sur "Voir plus"
+    document.querySelectorAll('.view-full-description').forEach(button => {
+        button.addEventListener('click', function() {
+            const description = this.getAttribute('data-description');
+            document.getElementById('fullDescriptionContent').textContent = description;
+            $('#descriptionModal').modal('show');
+        });
+    });
+});
+
 
         // Delete document modal
         $('.delete-document-btn').click(function() {
-            var docId = $(this).data('id');
-            $('#deleteForm').attr('action', '/documents/' + docId);
-        });
-    });
-    $('.revision-document-btn').click(function() {
+    var docId = $(this).data('id');
+    // Mettre à jour l'attribut action du formulaire pour correspondre à l'URL de suppression
+    $('#deleteForm').attr('action', '/documents/' + docId);
+});
+
+
+        // Revision document modal
+        $('.revision-document-btn').click(function() {
             let documentId = $(this).data('id');
             console.log("ID du document : " + documentId);
             $('#revisionForm').attr('action', '/documents/revision/' + documentId); // Set correct action
@@ -337,6 +523,143 @@
             });
         });
 
-</script>
 
+//icone
+// lock.js - Version finale testée
+document.addEventListener('DOMContentLoaded', function() {
+    // Stockage global de l'ID
+    window.currentLockDocId = null;
+
+    // Ouverture modale
+    window.openLockModal = function(docId) {
+        window.currentLockDocId = docId;
+        $('#lockModal').modal('show');
+    };
+
+    // Gestionnaire de clic amélioré
+    document.getElementById('confirmLockBtn').addEventListener('click', async function() {
+        if (!window.currentLockDocId) {
+            alert('Aucun document sélectionné');
+            return;
+        }
+
+        try {
+            // Méthode 1 : Récupération via meta tag
+            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            
+            // Méthode 2 : Fallback direct pour Laravel
+            if (!csrfToken && window.Laravel?.csrfToken) {
+                csrfToken = window.Laravel.csrfToken;
+            }
+
+            // Méthode 3 : Récupération depuis les cookies
+            if (!csrfToken) {
+                const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+                csrfToken = match ? decodeURIComponent(match[1]) : null;
+            }
+
+            if (!csrfToken) {
+                throw new Error('Impossible de récupérer le token CSRF');
+            }
+
+            // Envoi avec triple protection
+            const response = await fetch(`/documents/${window.currentLockDocId}/lock`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-XSRF-TOKEN': csrfToken, // Pour les cookies encryptés
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    '_token': csrfToken,
+                    'document_id': window.currentLockDocId
+                })
+            });
+
+            if (response.status === 419) {
+                const error = await response.json();
+                throw new Error(error.message || 'Session expirée - Veuillez recharger');
+            }
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            // Mise à jour UI
+            if (data.success) {
+                const lockIcon = document.getElementById(`lock-icon-${window.currentLockDocId}`);
+                if (lockIcon) {
+                    lockIcon.innerHTML = '<i class="fas fa-lock m-r-5" style="color:#00796B"></i>';
+                    lockIcon.onclick = null;
+                }
+                $('#lockModal').modal('hide');
+                alert('Document verrouillé avec succès');
+            }
+        } catch (error) {
+            console.error('Échec critique:', error);
+            alert(`ERREUR: ${error.message}`);
+            window.location.reload(); // Recharge en cas d'erreur CSRF
+        }
+    });
+});
+</script>
+<style>
+    .lock-document-btn i {
+        color: grey;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+
+    .lock-document-btn.locked i {
+        color: #03A9F4;
+        cursor: default;
+    }
+
+    /* Optionnel : popup */
+    .custom-modal {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .custom-modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .custom-modal-content button {
+        margin: 10px;
+    }
+    .edit-document-btn.locked i,
+/* Dans votre fichier CSS principal */
+.disabled-action {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+}
+
+.locked {
+    cursor: default !important;
+}
+
+[data-locked="true"] {
+    pointer-events: none;
+}
+
+/* Couleurs personnalisées */
+:root {
+    --locked-color: #00796B;
+    --disabled-color: #6c757d;
+}
+
+</style>
 @endsection

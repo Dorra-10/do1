@@ -12,7 +12,7 @@ class Document extends Model
     use SoftDeletes;
     use HasFactory;
 
-    protected $fillable = ['name','type_id', 'file_type', 'project_id', 'path', 'date_added','owner','company','description',];
+    protected $fillable = ['name', 'file_type', 'project_id', 'path', 'date_added','owner','company','description','is_locked'];
     
     public function project()
     {

@@ -70,6 +70,7 @@
                                         <th>Project ID</th>
                                         <th>Owner</th>
                                         <th>Company</th>
+                                        <th>Date</th>
                                         <th>Description</th>
                                         <th class="text-right">Actions</th>
                                     </tr>
@@ -78,16 +79,17 @@
                                     @forelse($documents as $document)
                                         <tr>
                                             <td>{{ $document->id }}</td>
-                                            <td>{{ $document->name }}.{{ $document->file_type }}{{ $document->updated_at->format('d/m/Y H:i') }}</td>
+                                            <td>{{ $document->name }}</td>
                                             <td>{{ $document->project_id }}</td>
                                             <td>{{ $document->owner }}</td>
                                             <td>{{ $document->company }}</td>
+                                            <td>{{ $document->updated_at->format('d/m/Y H:i') }}</td>
                                             <td>
-                                                <span class="description-preview">
-                                                    {{ Str::limit($document->description, 20) }} <!-- Limite à 50 caractères -->
+                                            <span class="description-preview">
+                                                    {{ Str::limit($document->description, 10) }} 
                                                 </span>
                                                 
-                                                @if(strlen($document->description) > 50)
+                                                @if(strlen($document->description) > 10)
                                                 <button class="btn btn-sm btn-link view-full-description" 
                                                         data-description="{{ $document->description }}">
                                                     See More
@@ -97,7 +99,7 @@
                                             <td class="text-right">
                                                 {{-- Bouton de modification --}}
                                                 @can('update document')
-                                                    <a href="#" class="edit-document-btn"
+                                                    <a href="#" class="edit-document-btn  {{ $document->is_locked ? 'locked' : '' }}"
                                                         data-id="{{ $document->id }}"
                                                         data-name="{{ $document->name }}"
                                                         data-project_id="{{ $document->project_id }}"
@@ -111,17 +113,6 @@
                                                     </a>
                                                 @endcan
 
-                                                {{-- Bouton de suppression --}}
-                                                @can('delete document')
-                                                    <a href="#" class="delete-document-btn"
-                                                        data-id="{{ $document->id }}"
-                                                        data-toggle="modal"
-                                                        data-target="#delete_modal">
-                                                        <i class="fas fa-trash-alt m-r-5"></i>
-                                                    </a>
-                                                @endcan
-
-                                                {{-- Icônes conditionnelles selon les accès --}}
                                                 @php
                                                     $user = auth()->user();
 
@@ -134,25 +125,68 @@
                                                         ->where('user_id', $user->id)
                                                         ->where('permission', 'read')
                                                         ->isNotEmpty();
+
+                                                    $isLocked = $document->is_locked;
                                                 @endphp
 
-                                                {{-- Téléchargement autorisé --}}
+                                                {{-- Bouton de suppression --}}
+                                                @can('delete document')
+                                                    <a href="#" 
+                                                    class="delete-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}" 
+                                                    onclick="{{ $isLocked ? 'return false;' : 'event.preventDefault(); openDeleteModal(' . $document->id . ');' }}" 
+                                                    style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
+                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Supprimer' }}">
+                                                        <i class="fas fa-trash m-r-5"></i>
+                                                    </a>
+                                                @endcan
+
+
+
+                                                {{-- Icône de téléchargement --}}
                                                 @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess || $hasReadAccess)
-                                                    <a href="{{ route('documents.download', $document->id) }}" class="download-document-btn">
+                                                    <a 
+                                                        href="{{ $isLocked ? '#' : route('documents.download', $document->id) }}" 
+                                                        class="download-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
+                                                        style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
+                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Télécharger' }}"
+                                                    >
                                                         <i class="fas fa-download m-r-5"></i>
                                                     </a>
                                                 @endif
 
-                                                {{-- Révision autorisée --}}
+                                                {{-- Icône de révision --}}
                                                 @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
-                                                    <a href="{{ route('documents.revision', $document->id) }}"
-                                                        class="revision-document-btn"
-                                                        data-id="{{ $document->id }}"
-                                                        data-toggle="modal"
-                                                        data-target="#revisionModal">
-                                                        <i class="fas fa-edit m-r-5"></i>
+                                                    <a href="{{ $isLocked ? '#' : route('documents.revision', $document->id) }}"
+                                                    class="revision-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
+                                                    style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
+                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Télécharger' }}"
+                                                    data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
+                                                        <i class="fas fa-edit m-r-5"></i> 
                                                     </a>
                                                 @endif
+
+
+                                                  <!-- Icône de verrouillage -->
+                                                  @if ($user->hasRole('admin'))
+                                                  <a href="#" 
+                                                    class="lock-document-btn {{ $document->is_locked ? 'locked' : '' }}" 
+                                                    title="{{ $document->is_locked ? 'Déjà verrouillé' : 'Verrouiller ce document' }}"
+                                                    data-locked="{{ $document->is_locked ? 'true' : 'false' }}"
+                                                    onclick="{{ !$document->is_locked ? 'openLockModal('.$document->id.')' : 'return false;' }}"
+                                                    id="lock-icon-{{ $document->id }}">
+                                                    <i class="fas {{ $document->is_locked ? 'fa-lock' : 'fa-unlock' }} m-r-5"></i>
+                                                    </a>
+
+                                                @endif
+
+                                                <!-- Formulaire caché -->
+                                                <form id="lock-form-{{ $document->id }}" 
+                                                    action="{{ route('documents.lock', $document->id) }}" 
+                                                    method="POST" 
+                                                    style="display: none;">
+                                                    @csrf
+                                                </form>
+
                                             </td>
                                         </tr>
                                     @empty
@@ -332,19 +366,22 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete this document ?</p>
+                <p>Are you sure you want to delete this document?</p>
             </div>
             <div class="modal-footer">
-                <form id="deleteForm" method="POST" action="">
+                <!-- Form for deletion -->
+                <form id="deleteForm" method="POST" action="" style="display: inline;">
                     @csrf
                     @method('DELETE')
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+                    <button type="submit" class="btn btn-danger">Yes</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+
 
 <!-- Modal pour afficher la description complète -->
 <div class="modal fade" id="descriptionModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -357,13 +394,35 @@
                 </button>
             </div>
             <div class="modal-body" id="fullDescriptionContent">
-                <!-- Le contenu sera inséré ici par JavaScript -->
+            <p>Are you sure you want to delete this document ?</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
+</div>
+
+
+<!-- Export confirmation -->
+<div class="modal fade" id="lockModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmer le verrouillage</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+       Are your sure you want to export this document ?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+        <button type="button" class="btn btn-primary" id="confirmLockBtn">Yes</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 
@@ -394,9 +453,10 @@
 </div>
 
 
-<script>
 
-document.addEventListener('DOMContentLoaded', function () {
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.edit-document-btn').forEach(button => {
         button.addEventListener('click', function () {
             const id = this.dataset.id;
@@ -447,19 +507,19 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-
-
-
         // Delete document modal
-        $('.delete-document-btn').click(function() {
-    var docId = $(this).data('id');
-    // Mettre à jour l'attribut action du formulaire pour correspondre à l'URL de suppression
-    $('#deleteForm').attr('action', '/documents/' + docId);
-});
+        function openDeleteModal(documentId) {
+    // Ouvre le modal
+    $('#delete_modal').modal('show');
+
+    // Met à jour l'action du formulaire avec l'ID du document à supprimer
+    var formAction = '{{ route('documents.destroy', ':id') }}';
+    formAction = formAction.replace(':id', documentId);
+    $('#deleteForm').attr('action', formAction);
+}
 
 
-        // Revision document modal
-        $('.revision-document-btn').click(function() {
+$('.revision-document-btn').click(function() {
             let documentId = $(this).data('id');
             console.log("ID du document : " + documentId);
             $('#revisionForm').attr('action', '/documents/revision/' + documentId); // Set correct action
@@ -489,6 +549,156 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+    
 
+
+
+
+
+
+//icone
+// lock.js - Version finale testée
+document.addEventListener('DOMContentLoaded', function() {
+    // Stockage global de l'ID
+    window.currentLockDocId = null;
+
+    // Ouverture modale
+    window.openLockModal = function(docId) {
+        window.currentLockDocId = docId;
+        $('#lockModal').modal('show');
+    };
+
+    // Gestionnaire de clic amélioré
+    document.getElementById('confirmLockBtn').addEventListener('click', async function() {
+        if (!window.currentLockDocId) {
+            alert('Aucun document sélectionné');
+            return;
+        }
+
+        try {
+            // Méthode 1 : Récupération via meta tag
+            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            
+            // Méthode 2 : Fallback direct pour Laravel
+            if (!csrfToken && window.Laravel?.csrfToken) {
+                csrfToken = window.Laravel.csrfToken;
+            }
+
+            // Méthode 3 : Récupération depuis les cookies
+            if (!csrfToken) {
+                const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+                csrfToken = match ? decodeURIComponent(match[1]) : null;
+            }
+
+            if (!csrfToken) {
+                throw new Error('Impossible de récupérer le token CSRF');
+            }
+
+            // Envoi avec triple protection
+            const response = await fetch(`/documents/${window.currentLockDocId}/lock`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-XSRF-TOKEN': csrfToken, // Pour les cookies encryptés
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    '_token': csrfToken,
+                    'document_id': window.currentLockDocId
+                })
+            });
+
+            if (response.status === 419) {
+                const error = await response.json();
+                throw new Error(error.message || 'Session expirée - Veuillez recharger');
+            }
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            // Mise à jour UI
+            if (data.success) {
+                const lockIcon = document.getElementById(`lock-icon-${window.currentLockDocId}`);
+                if (lockIcon) {
+                    lockIcon.innerHTML = '<i class="fas fa-lock m-r-5" style="color:#00796B"></i>';
+                    lockIcon.onclick = null;
+                }
+                $('#lockModal').modal('hide');
+                alert('Document verrouillé avec succès');
+            }
+        } catch (error) {
+            console.error('Échec critique:', error);
+            alert(`ERREUR: ${error.message}`);
+            window.location.reload(); // Recharge en cas d'erreur CSRF
+        }
+    });
+});
 </script>
+
+<style>
+    .lock-document-btn i {
+        color: grey;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+
+    .lock-document-btn.locked i {
+        color: #03A9F4;
+        cursor: default;
+    }
+
+    /* Optionnel : popup */
+    .custom-modal {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .custom-modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .custom-modal-content button {
+        margin: 10px;
+    }
+    .edit-document-btn.locked i,
+/* Dans votre fichier CSS principal */
+.disabled-action {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+}
+
+.locked {
+    cursor: default !important;
+}
+
+[data-locked="true"] {
+    pointer-events: none;
+}
+
+/* Couleurs personnalisées */
+:root {
+    --locked-color: #00796B;
+    --disabled-color: #6c757d;
+}
+
+</style>
+
+
+
+
+
+
 @endsection

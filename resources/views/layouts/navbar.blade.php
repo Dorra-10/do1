@@ -83,10 +83,10 @@
                     </li>
                     
                     <li class="submenu">
-                        <a href="#""><i class="fas fa-exchange-alt"></i><span>Impo/Expo</span> <span class="menu-arrow"></span> </a>
+                        <a href="#"><i class="fas fa-exchange-alt"></i><span>Impo/Expo</span> <span class="menu-arrow"></span> </a>
                         <ul class="submenu_class" style="display: none;">
                             <li><a href="">Import</a></li>
-                            <li><a href="">Export</a></li>
+                            <li><a href="{{ route('impoexpo.expo.index') }}">Export</a></li>
                         </ul>
                     </li> 
 
