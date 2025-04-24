@@ -38,14 +38,15 @@ class UserController extends Controller
             'password' => 'required|string|min:8|max:20',
             'roles' => 'required'
         ]);
-
+    
         $user = User::create([
-                        'name' => $request->name,
-                        'email' => $request->email,
-                        'password' => Hash::make($request->password),
-                    ]);
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
 
-        $user->syncRoles($request->roles);
+        $user->syncRoles($request->roles); 
+        $user->notify(new \App\Notifications\SendNewUserCredentials($request->password));
 
         return redirect('/users')->with('status','User created successfully with roles');
     }

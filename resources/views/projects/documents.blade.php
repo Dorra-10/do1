@@ -77,23 +77,7 @@
                                                 @endif
                                             </td>
                                             <td class="text-right">
-                                                {{-- Bouton de modification --}}
-                                                @can('update document')
-                                                    <a href="#" class="edit-document-btn  {{ $document->is_locked ? 'locked' : '' }}"
-                                                        data-id="{{ $document->id }}"
-                                                        data-name="{{ $document->name }}"
-                                                        data-project_id="{{ $document->project_id }}"
-                                                        data-owner="{{ $document->owner }}"
-                                                        data-company="{{ $document->company }}"
-                                                        data-description="{{ $document->description }}"
-                                                        data-date_added="{{ $document->date_added }}"
-                                                        data-toggle="modal"
-                                                        data-target="#editDocumentModal">
-                                                        <i class="fas fa-pencil-alt"></i>
-                                                    </a>
-                                                @endcan
-
-                                                @php
+                                            @php
                                                     $user = auth()->user();
 
                                                     $hasWriteAccess = $document->accesses
@@ -109,15 +93,33 @@
                                                     $isLocked = $document->is_locked;
                                                 @endphp
 
-                                                {{-- Bouton de suppression --}}
-                                                @can('delete document')
-                                                    <a 
-                                                        href="{{ $isLocked ? '#' : route('documents.destroy', $document->id) }}"
-                                                        class="delete-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
+
+                                                {{-- Bouton de modification --}}
+                                                @can('update document')
+                                                    <a href="#"
+                                                        class="edit-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
+                                                        data-id="{{ $document->id }}"
+                                                        data-name="{{ $document->name }}"
+                                                        data-project_id="{{ $document->project_id }}"
+                                                        data-owner="{{ $document->owner }}"
+                                                        data-company="{{ $document->company }}"
+                                                        data-description="{{ $document->description }}"
+                                                        data-date_added="{{ $document->date_added }}"
+                                                        {{ $isLocked ? '' : 'data-toggle=modal data-target=#editDocumentModal' }}
                                                         onclick="{{ $isLocked ? 'return false;' : '' }}"
                                                         style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
-                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Supprimer' }}"
-                                                    >
+                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Edit' }}">
+                                                        <i class="fas fa-pencil-alt"></i>
+                                                    </a>
+                                                @endcan
+
+                                                {{-- Bouton de suppression --}}
+                                                @can('delete document')
+                                                    <a href="#" 
+                                                    class="delete-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}" 
+                                                    onclick="{{ $isLocked ? 'return false;' : 'event.preventDefault(); openDeleteModal(' . $document->id . ');' }}" 
+                                                    style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
+                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Delete' }}">
                                                         <i class="fas fa-trash m-r-5"></i>
                                                     </a>
                                                 @endcan
@@ -128,7 +130,7 @@
                                                         href="{{ $isLocked ? '#' : route('documents.download', $document->id) }}" 
                                                         class="download-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
                                                         style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
-                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Télécharger' }}"
+                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Download' }}"
                                                     >
                                                         <i class="fas fa-download m-r-5"></i>
                                                     </a>
@@ -139,7 +141,7 @@
                                                     <a href="{{ $isLocked ? '#' : route('documents.revision', $document->id) }}"
                                                     class="revision-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
                                                     style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
-                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Télécharger' }}"
+                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Upload' }}"
                                                     data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
                                                         <i class="fas fa-edit m-r-5"></i> 
                                                     </a>
@@ -150,7 +152,7 @@
                                                   @if ($user->hasRole('admin'))
                                                   <a href="#" 
                                                     class="lock-document-btn {{ $document->is_locked ? 'locked' : '' }}" 
-                                                    title="{{ $document->is_locked ? 'Déjà verrouillé' : 'Verrouiller ce document' }}"
+                                                    title="{{ $document->is_locked ? 'Déjà verrouillé' : 'Lock this document' }}"
                                                     data-locked="{{ $document->is_locked ? 'true' : 'false' }}"
                                                     onclick="{{ !$document->is_locked ? 'openLockModal('.$document->id.')' : 'return false;' }}"
                                                     id="lock-icon-{{ $document->id }}">
@@ -158,6 +160,7 @@
                                                     </a>
 
                                                 @endif
+
 
                                                 <!-- Formulaire caché -->
                                                 <form id="lock-form-{{ $document->id }}" 
@@ -274,65 +277,6 @@
 </div>
 
 
-
-
-<!-- Modal Edit Document -->
-<div class="modal fade" id="editDocumentModal" tabindex="-1" role="dialog" aria-labelledby="editDocumentModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editDocumentModalLabel">Edit Document</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">×</span>
-                </button>
-            </div>
-            <form id="editDocumentForm" method="POST" action="{{ route('documents.update', ':id') }}">
-                @csrf
-                @method('PUT')
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="editName">Document Name</label>
-                        <input type="text" class="form-control" id="editName" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="editFileType">Type</label>
-                        <select class="form-control" id="editFileType" name="type" required>
-                            <option value="">Select type</option>
-                            <option value="pdf">pdf</option>
-                            <option value="docx">docx</option>
-                            <option value="ppt">ppt</option>
-                            <option value="excel">excel</option>
-                            <option value="catia">catia</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="editProjectId">Project ID</label>
-                        <input type="number" class="form-control" id="editProjectId" name="project_id" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="editAccess">Access</label>
-                        <select class="form-control" id="editAccess" name="access" required>
-                            <option value="">Select access</option>
-                            <option value="read">Read</option>
-                            <option value="read and write">Read and Write</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="editDate">Date Added</label>
-                        <input type="date" class="form-control" id="editDate" name="date_added" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Delete Document -->
 <div class="modal fade" id="delete_modal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -347,16 +291,75 @@
                 <p>Are you sure you want to delete this document?</p>
             </div>
             <div class="modal-footer">
-                <form id="deleteForm" method="POST" action="">
+                <!-- Form for deletion -->
+                <form id="deleteForm" method="POST" action="" style="display: inline;">
                     @csrf
                     @method('DELETE')
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+                    <button type="submit" class="btn btn-danger">Yes</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+
+<!-- Modal Edit Document -->
+<div class="modal fade" id="editDocumentModal" tabindex="-1" role="dialog" aria-labelledby="editDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editDocumentModalLabel">Edit Document</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+
+            <form id="editDocumentForm" method="POST" action="{{ route('projects.documents.update', [
+          'projectId' => $document->project_id,
+          'document' => $document->id
+      ]) }}">
+      @csrf
+                @method('PUT')
+                <div class="modal-body">
+                    <!-- Document Name -->
+                    <div class="form-group">
+                        <label for="editName">Document Name</label>
+                        <input type="text" class="form-control" id="editName" name="name" required>
+                    </div>
+
+                    
+                    <div class="form-group">
+                        <label for="editOwner">Owner</label>
+                        <input type="text" class="form-control" id="editOwner" name="owner" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editCompany">Company</label>
+                        <input type="text" class="form-control" id="editCompany" name="company" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editDescription">Description</label>
+                        <textarea id="editDescription" name="description" rows="4" class="form-control"></textarea>
+                    </div>
+
+                    <!-- Date Added -->
+                    <div class="form-group">
+                        <label for="editDate">Date Added</label>
+                        <input type="date" class="form-control" id="editDate" name="date_added" required>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 
 <!-- Modal pour afficher la description complète -->
 <div class="modal fade" id="descriptionModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -432,12 +435,13 @@
 
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+
+document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.edit-document-btn').forEach(button => {
         button.addEventListener('click', function () {
             const id = this.dataset.id;
             const name = this.dataset.name;
-            const projectId = this.dataset.projectId || this.dataset.project_id; // les deux formats possibles
+           
             const dateAdded = this.dataset.dateAdded || this.dataset.date_added;
             const owner = this.dataset.owner || '';
             const company = this.dataset.company || '';
@@ -449,10 +453,7 @@
             document.getElementById('editCompany').value = company;
             document.getElementById('editDescription').value = description; // Pour textarea, on utilise .value
 
-            // Projet
-            if (projectId) {
-                document.getElementById('editProjectId').value = projectId;
-            }
+        
 
             // Date - format YYYY-MM-DD
             if (dateAdded) {
@@ -471,6 +472,8 @@
 });
 
 
+
+
 document.addEventListener('DOMContentLoaded', function() {
     // Gestion du clic sur "Voir plus"
     document.querySelectorAll('.view-full-description').forEach(button => {
@@ -483,13 +486,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-        // Delete document modal
-        $('.delete-document-btn').click(function() {
-    var docId = $(this).data('id');
-    // Mettre à jour l'attribut action du formulaire pour correspondre à l'URL de suppression
-    $('#deleteForm').attr('action', '/documents/' + docId);
-});
+         // Delete document modal
+         function openDeleteModal(documentId) {
+    // Ouvre le modal
+    $('#delete_modal').modal('show');
 
+    // Met à jour l'action du formulaire avec l'ID du document à supprimer
+    var formAction = '{{ route('documents.destroy', ':id') }}';
+    formAction = formAction.replace(':id', documentId);
+    $('#deleteForm').attr('action', formAction);
+}
 
         // Revision document modal
         $('.revision-document-btn').click(function() {

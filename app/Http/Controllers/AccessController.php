@@ -7,6 +7,8 @@ use App\Models\Document;
 use App\Models\User;
 use App\Models\Access;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\DocumentAccessNotification;
 
 class AccessController extends Controller
 {
@@ -30,7 +32,7 @@ class AccessController extends Controller
         $projects = Project::all();
         $documents = collect([]); // Initialiser une collection vide pour les documents
 
-        return view('access.givePermission', compact('users', 'projects', 'documents'));
+        return view('access.index', compact('users', 'projects', 'documents'));
     }
 
     // Récupérer les documents d'un projet spécifique
@@ -58,7 +60,20 @@ class AccessController extends Controller
             'document_id' => 'required|exists:documents,id',
             'permission' => 'required|in:read,write',
         ]);
-
+    
+        // Récupérer l'utilisateur et le document
+        $user = User::find($request->user_id);
+        $document = Document::find($request->document_id);
+    
+        // Vérifier si l'utilisateur ou le document est introuvable
+        if (!$user) {
+            return redirect()->back()->with('error', 'Utilisateur introuvable.');
+        }
+    
+        if (!$document) {
+            return redirect()->back()->with('error', 'Document introuvable.');
+        }
+    
         // Enregistrer la permission dans la table 'accesses'
         $access = new Access();
         $access->user_id = $request->user_id;
@@ -66,8 +81,13 @@ class AccessController extends Controller
         $access->document_id = $request->document_id;
         $access->permission = $request->permission;
         $access->save();
+    
+        // Envoyer l'email de notification
+        Mail::to($user->email)->send(new DocumentAccessNotification($document, $request->permission, $user));
+    
         return redirect()->route('access.index')->with('success', 'Permission donnée avec succès.');
     }
+    
 
     // Supprimer un accès
     public function deleteAccess(Request $request)

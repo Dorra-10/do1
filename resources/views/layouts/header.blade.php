@@ -28,8 +28,9 @@
         @endif
     </p>
 </div>
-
-        </div>
+</div>
+<a class="dropdown-item" href="{{route('profile.edit')}}">My Profile</a>
+        
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <a class="dropdown-item" href="{{ route('logout') }}"

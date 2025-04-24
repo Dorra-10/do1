@@ -80,7 +80,7 @@ Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], func
     Route::prefix('projects/{projectId}/documents')->group(function () {
     Route::get('/', [ProjectController::class, 'showDocuments'])->name('projects.documents');
         Route::get('/download/{documentId}', [ProjectController::class, 'downloadDocument'])->name('projects.documents.download');
-        Route::post('/update/{document}', [ProjectController::class, 'updateDocument'])->name('projects.documents.update');
+        Route::put('/{document}', [ProjectController::class, 'updateDocument'])->name('projects.documents.update');
         Route::post('/revise/{documentId}', [ProjectController::class, 'reviseDocument'])->name('projects.documents.revise');
         Route::delete('/delete/{documentId}', [ProjectController::class, 'deleteDocument'])->name('projects.documents.delete');
     });

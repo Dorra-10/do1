@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ProjectController extends Controller
 {
+    
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -149,25 +150,40 @@ class ProjectController extends Controller
         return response()->download(Storage::disk('public')->path($document->path), $document->name);
     }
 
-    public function updateDocument(Request $request, $projectId, Document $document)
-    {
+    public function updateDocument(Request $request, $projectId, $documentId)
+{
+    $document = Document::where('id', $documentId)
+                        ->where('project_id', $projectId)
+                        ->firstOrFail();
         $request->validate([
             'name' => 'required|string|max:255',
             'access' => 'nullable|string',
             'file' => 'nullable|file|mimes:pdf,docx,pptx,xlsx|max:10240',
         ]);
 
+        $filePath = $document->path;
+        $file_type = $document->file_type;
+
         if ($request->hasFile('file')) {
-            Storage::disk('public')->delete($document->path);
+            if (Storage::disk('public')->exists($document->path)) {
+                Storage::disk('public')->delete($document->path);
+            }
+
             $file = $request->file('file');
             $filePath = $file->storeAs('documents', time() . '_' . $file->getClientOriginalName(), 'public');
-            $document->update(['path' => $filePath, 'file_type' => $file->getClientOriginalExtension()]);
+            $file_type = $file->getClientOriginalExtension();
         }
 
-        $document->update($request->only(['name', 'access']));
-        return redirect()->route('projects.show', $projectId)->with('success', 'Document mis à jour avec succès.');
-    }
-
+        $document->update([
+            'name' => $request->input('name'),
+            'access' => $request->input('access'),
+            'path' => $filePath,
+            'file_type' => $file_type,
+        ]);
+        return redirect()
+    ->route('projects.documents', ['projectId' => $projectId]) // Utilise 'projectId' ici
+    ->with('success', 'Document mis à jour avec succès');
+}
 
     public function revision(Request $request, $id)
     {
@@ -192,7 +208,7 @@ class ProjectController extends Controller
     
             // ✅ D'abord récupérer le fichier
             $request->validate([
-                'file' => 'required|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr|max:20480',
+                'file' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,xlsx,xls,catpart,stl,igs,stp|max:20480',
             ]);
     
             $file = $request->file('file');
@@ -261,10 +277,18 @@ class ProjectController extends Controller
     
 
     public function deleteDocument($projectId, $documentId)
-    {
-        $document = Document::where('project_id', $projectId)->findOrFail($documentId);
-        Storage::disk('public')->delete($document->path);
-        $document->delete();
-        return redirect()->route('projects.show', $projectId)->with('success', 'Document supprimé avec succès !');
-    }
+{
+    $document = Document::where('project_id', $projectId)->findOrFail($documentId);
+
+    // Suppression du fichier associé
+    Storage::disk('public')->delete($document->path);
+
+    // Suppression du document de la base de données
+    $document->delete();
+
+    // Redirection avec message de succès
+    return redirect()->route('projects.show', $projectId)
+                     ->with('success', 'Document deleted successfully !');
+}
+
 }

@@ -109,7 +109,7 @@ class DocumentController extends Controller
 {
     // Validation des données
     $request->validate([
-        'document' => 'required|file|mimes:pdf,docx,pptx,xlsx,xls|max:20480',
+        'document' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,xlsx,xls,catpart,stl,igs,stp|max:20480',
         'project_id' => 'required|exists:projects,id',
         'name' => 'required|string|max:255',
         'access' => 'nullable|string|max:255',
@@ -220,48 +220,35 @@ class DocumentController extends Controller
    }
    
    public function update(Request $request, Document $document)
-{
-    // 1. Valider tous les champs du formulaire
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'project_id' => 'required|exists:projects,id',
-        'owner' => 'required|string|max:255',
-        'company' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'date_added' => 'required|date',
-        'file' => 'nullable|file|mimes:pdf,docx,pptx,xlsx|max:10240', // seulement si vous avez un champ file
-    ]);
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'access' => 'nullable|string',
+            'file' => 'nullable|file|mimes:pdf,docx,pptx,xlsx|max:10240',
+        ]);
 
-    // 2. Gestion du fichier (uniquement si vous avez ce champ)
-    $fileData = [];
-    if ($request->hasFile('file')) {
-        // Supprimer l'ancien fichier
-        if (Storage::disk('public')->exists($document->path)) {
-            Storage::disk('public')->delete($document->path);
+        $filePath = $document->path;
+        $file_type = $document->file_type;
+
+        if ($request->hasFile('file')) {
+            if (Storage::disk('public')->exists($document->path)) {
+                Storage::disk('public')->delete($document->path);
+            }
+
+            $file = $request->file('file');
+            $filePath = $file->storeAs('documents', time() . '_' . $file->getClientOriginalName(), 'public');
+            $file_type = $file->getClientOriginalExtension();
         }
 
-        // Stocker le nouveau fichier
-        $file = $request->file('file');
-        $filePath = $file->storeAs('documents', time() . '_' . $file->getClientOriginalName(), 'public');
-        
-        $fileData = [
+        $document->update([
+            'name' => $request->input('name'),
+            'access' => $request->input('access'),
             'path' => $filePath,
-            'file_type' => $file->getClientOriginalExtension(),
-        ];
+            'file_type' => $file_type,
+        ]);
+
+        return redirect()->route('documents.index')->with('success', 'Document mis à jour avec succès');
     }
-
-    // 3. Mettre à jour tous les champs
-    $document->update(array_merge([
-        'name' => $validated['name'],
-        'project_id' => $validated['project_id'],
-        'owner' => $validated['owner'],
-        'company' => $validated['company'],
-        'description' => $validated['description'],
-        'date_added' => $validated['date_added'],
-    ], $fileData));
-
-    return redirect()->route('documents.index')->with('success', 'Document updated successfully!');
-}
 
 
 
@@ -288,7 +275,7 @@ public function revision(Request $request, $id)
 
         // ✅ D'abord récupérer le fichier
         $request->validate([
-            'file' => 'required|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr|max:20480',
+            'file' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,xlsx,xls,catpart,stl,igs,stp|max:20480',
         ]);
 
         $file = $request->file('file');
@@ -357,19 +344,6 @@ public function revision(Request $request, $id)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 public function destroy($id)
 {
     // Trouver le document dans la base de données
@@ -387,7 +361,7 @@ public function destroy($id)
         $document->forceDelete();
 
         // Retourner un message de succès
-        return redirect()->route('documents.index')->with('status', 'Documents deleted successfully !');
+        return redirect()->route('documents.index')->with('success', 'Documents deleted successfully !');
         
     } catch (\Exception $e) {
         // Gestion des erreurs

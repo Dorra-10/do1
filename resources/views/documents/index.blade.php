@@ -97,23 +97,7 @@
                                                 @endif
                                             </td>
                                             <td class="text-right">
-                                                {{-- Bouton de modification --}}
-                                                @can('update document')
-                                                    <a href="#" class="edit-document-btn  {{ $document->is_locked ? 'locked' : '' }}"
-                                                        data-id="{{ $document->id }}"
-                                                        data-name="{{ $document->name }}"
-                                                        data-project_id="{{ $document->project_id }}"
-                                                        data-owner="{{ $document->owner }}"
-                                                        data-company="{{ $document->company }}"
-                                                        data-description="{{ $document->description }}"
-                                                        data-date_added="{{ $document->date_added }}"
-                                                        data-toggle="modal"
-                                                        data-target="#editDocumentModal">
-                                                        <i class="fas fa-pencil-alt"></i>
-                                                    </a>
-                                                @endcan
-
-                                                @php
+                                            @php
                                                     $user = auth()->user();
 
                                                     $hasWriteAccess = $document->accesses
@@ -128,6 +112,27 @@
 
                                                     $isLocked = $document->is_locked;
                                                 @endphp
+                                                {{-- Bouton de modification --}}
+                                                @can('update document')
+                                                    <a href="#"
+                                                        class="edit-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
+                                                        data-id="{{ $document->id }}"
+                                                        data-name="{{ $document->name }}"
+                                                        data-project_id="{{ $document->project_id }}"
+                                                        data-owner="{{ $document->owner }}"
+                                                        data-company="{{ $document->company }}"
+                                                        data-description="{{ $document->description }}"
+                                                        data-date_added="{{ $document->date_added }}"
+                                                        {{ $isLocked ? '' : 'data-toggle=modal data-target=#editDocumentModal' }}
+                                                        onclick="{{ $isLocked ? 'return false;' : '' }}"
+                                                        style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
+                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Edit' }}">
+                                                        <i class="fas fa-pencil-alt"></i>
+                                                    </a>
+                                                @endcan
+
+
+                                               
 
                                                 {{-- Bouton de suppression --}}
                                                 @can('delete document')
@@ -135,7 +140,7 @@
                                                     class="delete-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}" 
                                                     onclick="{{ $isLocked ? 'return false;' : 'event.preventDefault(); openDeleteModal(' . $document->id . ');' }}" 
                                                     style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
-                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Supprimer' }}">
+                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Delete' }}">
                                                         <i class="fas fa-trash m-r-5"></i>
                                                     </a>
                                                 @endcan
@@ -148,7 +153,7 @@
                                                         href="{{ $isLocked ? '#' : route('documents.download', $document->id) }}" 
                                                         class="download-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
                                                         style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
-                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Télécharger' }}"
+                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Download' }}"
                                                     >
                                                         <i class="fas fa-download m-r-5"></i>
                                                     </a>
@@ -159,7 +164,7 @@
                                                     <a href="{{ $isLocked ? '#' : route('documents.revision', $document->id) }}"
                                                     class="revision-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
                                                     style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
-                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Télécharger' }}"
+                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Upload' }}"
                                                     data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
                                                         <i class="fas fa-edit m-r-5"></i> 
                                                     </a>
@@ -170,7 +175,7 @@
                                                   @if ($user->hasRole('admin'))
                                                   <a href="#" 
                                                     class="lock-document-btn {{ $document->is_locked ? 'locked' : '' }}" 
-                                                    title="{{ $document->is_locked ? 'Déjà verrouillé' : 'Verrouiller ce document' }}"
+                                                    title="{{ $document->is_locked ? 'Déjà verrouillé' : 'Lock this document' }}"
                                                     data-locked="{{ $document->is_locked ? 'true' : 'false' }}"
                                                     onclick="{{ !$document->is_locked ? 'openLockModal('.$document->id.')' : 'return false;' }}"
                                                     id="lock-icon-{{ $document->id }}">
@@ -624,7 +629,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 const lockIcon = document.getElementById(`lock-icon-${window.currentLockDocId}`);
                 if (lockIcon) {
-                    lockIcon.innerHTML = '<i class="fas fa-lock m-r-5" style="color:#00796B"></i>';
+                    lockIcon.innerHTML = '<i class="fas fa-lock m-r-5" style="color:#03A9F4"></i>';
                     lockIcon.onclick = null;
                 }
                 $('#lockModal').modal('hide');

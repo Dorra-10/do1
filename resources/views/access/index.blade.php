@@ -40,18 +40,24 @@
                                         <td>{{ $access->permission }}</td>
                                         <td>{{ $access->created_at->format('d-m-Y H:i') }}</td>
                                         <td class="text-right">
-                                            <a class="edit-access-btn" 
-                                            data-id="{{ $access->id }}"
-                                            data-user_name="{{ $access->user_name}}"
-                                            data-project_name="{{ $access->project_name }}"
-                                            data-document_name="{{ $access->documentname}}"
-                                            data-access="{{ $access->permission }}"
-                                            data-date_added="{{ $access->created_at->format('d-m-Y H:i') }}"
-                                            data-toggle="modal" 
-                                            data-target="#editAccessModal">
-                                                <i class="fas fa-pencil-alt m-r-5"></i>
-                                            </a>
-                                            <a href="#" class="delete-document-btn" 
+                                        <a class="edit-access-btn"
+                                        data-id="{{ $access->id }}"
+                                        data-user_id="{{ $access->user_id }}"
+                                        data-user_name="{{ $access->user_name }}"
+                                        data-project_id="{{ $access->project_id }}"
+                                        data-project_name="{{ $access->project_name }}"
+                                        data-document_id="{{ $access->document_id }}"
+                                        data-document_name="{{ $access->documentname }}"
+                                        data-access="{{ $access->permission }}"
+                                        data-date_added="{{ $access->created_at->format('d-m-Y H:i') }}"
+                                        data-toggle="modal"
+                                        data-target="#editAccessModal">
+                                        <i class="fas fa-pencil-alt m-r-5"></i>
+                                        </a>
+
+
+                                        
+                                            <a href="#" class="delete-access-btn" 
                                             data-id="{{ $access->id }}" 
                                             data-name="{{ $access->document->name ?? 'Unknown Document' }}" 
                                             data-toggle="modal" 
@@ -224,7 +230,7 @@
 
 
 <!-- Script to handle the dynamic document loading -->
- <script>
+<script>
 $(document).ready(function() {
     // =============================================
     // FONCTION COMMUNE DE CHARGEMENT DES DOCUMENTS

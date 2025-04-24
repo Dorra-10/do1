@@ -53,7 +53,11 @@
                                                 <a href="{{ route('exports.download', $export->id) }}" class="download-document-btn">
                                                     <i class="fas fa-download m-r-5"></i>
                                                 </a>
-                                            </td>
+                                           
+                                                <a href="#" class="delete-document-btn" data-id="{{ $export->id }}" data-toggle="modal" data-target="#delete_modal">
+                                            <i class="fas fa-trash-alt m-r-5"></i>
+                                        </a>
+                                                    </td>
                                         </tr>
                                     @empty
                                         <tr>
@@ -73,7 +77,43 @@
     </div>
 </div>
 
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="delete_modal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+        
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        
+            <div class="modal-body">
+                <p>Voulez-vous vraiment supprimer ce document ?</p>
+            </div>
+        
+            <div class="modal-footer">
+                <form id="deleteForm" method="POST" action="">
+                    @csrf
+                    @method('DELETE')
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
 
+        </div>
+    </div>
+</div>
+
+<!-- Script jQuery pour remplir dynamiquement l'action -->
+<script>
+    $('.delete-document-btn').click(function () {
+        var docId = $(this).data('id');
+        var actionUrl = "{{ url('/exports') }}/" + docId;
+        $('#deleteForm').attr('action', actionUrl);
+    });
+</script>
 
 
 @endsection

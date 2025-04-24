@@ -43,4 +43,29 @@ class ExportController extends Controller
      return Storage::disk('public')->download($filePath, $export->name . '.' . $extension);
     }
     
+
+    public function destroy($id)
+{
+    // Trouver le document dans la base de données
+    $document = Document::findOrFail($id);
+
+    try {
+        // Supprimer le fichier du stockage (si il existe)
+        if (Storage::disk('public')->exists($export->path)) {
+            Storage::disk('public')->delete($export->path);
+        } else {
+            return redirect()->route('impoexpo.expo.index')->with('error', 'Le fichier n\'existe pas sur le disque');
+        }
+
+        // Utiliser forceDelete pour une suppression définitive (si SoftDeletes est activé)
+        $export->forceDelete();
+
+        // Retourner un message de succès
+        return redirect()->route('impoexpo.expo.index')->with('status', 'Documents deleted successfully !');
+        
+    } catch (\Exception $e) {
+        // Gestion des erreurs
+        return redirect()->route('impoexpo.expo.index')->with('error', 'Erreur lors de la suppression du document: ' . $e->getMessage());
+    }
+}
 }
