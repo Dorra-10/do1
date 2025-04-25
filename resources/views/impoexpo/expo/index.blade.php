@@ -1,7 +1,30 @@
 @extends('layouts.app')
 
 @section('content')
+@if (session('success'))
+        <div id="success-message" style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color:rgb(86, 109, 103);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 9999;
+        ">
+            {{ session('success') }}
+        </div>
 
+        <script>
+            setTimeout(function() {
+                var message = document.getElementById('success-message');
+                if (message) {
+                    message.style.display = 'none';
+                }
+            }, 2000);
+        </script>
+    @endif
 <div class="page-wrapper">
     <div class="content container-fluid">
         <div class="page-header">
@@ -40,10 +63,10 @@
                                             <td>{{ $export->company }}</td>
                                             <td>
                                                 <span class="description-preview">
-                                                    {{ Str::limit($export->description, 20) }}
+                                                    {{ Str::limit($export->description, 10) }}
                                                 </span>
 
-                                                @if(strlen($export->description) > 50)
+                                                @if(strlen($export->description) > 10)
                                                     <button class="btn btn-sm btn-link view-full-description" data-description="{{ $export->description }}">
                                                         See More
                                                     </button>
@@ -57,7 +80,7 @@
                                                 <a href="#" class="delete-document-btn" data-id="{{ $export->id }}" data-toggle="modal" data-target="#delete_modal">
                                             <i class="fas fa-trash-alt m-r-5"></i>
                                         </a>
-                                                    </td>
+                                    </td>
                                         </tr>
                                     @empty
                                         <tr>
@@ -83,22 +106,22 @@
         <div class="modal-content">
         
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <h5 class="modal-title" id="deleteModalLabel">Confirm deletion</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
         
             <div class="modal-body">
-                <p>Voulez-vous vraiment supprimer ce document ?</p>
+                <p>Are you sure you want to delete this Export ?</p>
             </div>
         
             <div class="modal-footer">
                 <form id="deleteForm" method="POST" action="">
                     @csrf
                     @method('DELETE')
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
                 </form>
             </div>
 
@@ -106,13 +129,44 @@
     </div>
 </div>
 
-<!-- Script jQuery pour remplir dynamiquement l'action -->
+<!-- Modal pour afficher la description complète -->
+
+<div class="modal fade" id="descriptionModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document"> <!-- Plus grand pour les longues descriptions -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Document Description</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="fullDescriptionContent">
+                <!-- Le contenu de la description sera injecté ici en JS -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     $('.delete-document-btn').click(function () {
         var docId = $(this).data('id');
         var actionUrl = "{{ url('/exports') }}/" + docId;
         $('#deleteForm').attr('action', actionUrl);
     });
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du clic sur "Voir plus"
+    document.querySelectorAll('.view-full-description').forEach(button => {
+        button.addEventListener('click', function() {
+            const description = this.getAttribute('data-description');
+            document.getElementById('fullDescriptionContent').textContent = description;
+            $('#descriptionModal').modal('show');
+        });
+    });
+});
 </script>
 
 

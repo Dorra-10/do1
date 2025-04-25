@@ -308,14 +308,14 @@
                 </button>
             </div>
 
-            <form id="editDocumentForm" method="POST" action="">
+            <form id="editDocumentForm" method="POST" action="{{ route('documents.update', $document->id) }}">
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
                     <!-- Document Name -->
                     <div class="form-group">
                         <label for="editName">Document Name</label>
-                        <input type="text" class="form-control" id="editName" name="name" required>
+                        <input type="text" class="form-control" id="editName" name="name" value="{{ old('name', $document->name) }}" required>
                     </div>
 
                     <!-- Project Selection -->
@@ -324,30 +324,35 @@
                         <select class="form-control" id="editProjectId" name="project_id" required>
                             <option value="">Select Project</option>
                             @foreach($projects as $project)
-                                <option value="{{ $project->id }}">{{ $project->name }}</option>
+                                <option value="{{ $project->id }}" {{ $project->id == $document->project_id ? 'selected' : '' }}>
+                                    {{ $project->name }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
                     
+                    <!-- Owner -->
                     <div class="form-group">
                         <label for="editOwner">Owner</label>
-                        <input type="text" class="form-control" id="editOwner" name="owner" required>
+                        <input type="text" class="form-control" id="editOwner" name="owner" value="{{ old('owner', $document->owner) }}" required>
                     </div>
                     
+                    <!-- Company -->
                     <div class="form-group">
                         <label for="editCompany">Company</label>
-                        <input type="text" class="form-control" id="editCompany" name="company" required>
+                        <input type="text" class="form-control" id="editCompany" name="company" value="{{ old('company', $document->company) }}" required>
                     </div>
                     
+                    <!-- Description -->
                     <div class="form-group">
                         <label for="editDescription">Description</label>
-                        <textarea id="editDescription" name="description" rows="4" class="form-control"></textarea>
+                        <textarea id="editDescription" name="description" rows="4" class="form-control">{{ old('description', $document->description) }}</textarea>
                     </div>
 
                     <!-- Date Added -->
                     <div class="form-group">
                         <label for="editDate">Date Added</label>
-                        <input type="date" class="form-control" id="editDate" name="date_added" required>
+                        <input type="date" class="form-control" id="editDate" name="date_added" value="{{ old('date_added', $document->date_added ? \Carbon\Carbon::parse($document->date_added)->format('Y-m-d') : '') }}" required>
                     </div>
                 </div>
 
@@ -359,6 +364,7 @@
         </div>
     </div>
 </div>
+
 
 <!-- Modal Delete Document -->
 <div class="modal fade" id="delete_modal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
@@ -390,16 +396,16 @@
 
 <!-- Modal pour afficher la description complète -->
 <div class="modal fade" id="descriptionModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document"> <!-- Plus grand pour les longues descriptions -->
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Description</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <h5 class="modal-title">Document Description</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body" id="fullDescriptionContent">
-            <p>Are you sure you want to delete this document ?</p>
+                <!-- Le contenu de la description sera injecté ici en JS -->
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -409,12 +415,13 @@
 </div>
 
 
+
 <!-- Export confirmation -->
 <div class="modal fade" id="lockModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Confirmer le verrouillage</h5>
+        <h5 class="modal-title">Confirm lock</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>

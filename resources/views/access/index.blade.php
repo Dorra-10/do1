@@ -1,6 +1,30 @@
 @extends('layouts.app')
 
 @section('content')
+@if (session('success'))
+        <div id="success-message" style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color:rgb(86, 109, 103);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 9999;
+        ">
+            {{ session('success') }}
+        </div>
+
+        <script>
+            setTimeout(function() {
+                var message = document.getElementById('success-message');
+                if (message) {
+                    message.style.display = 'none';
+                }
+            }, 2000);
+        </script>
+    @endif
 <div class="page-wrapper">
     <div class="content container-fluid">
         <div class="page-header">
@@ -221,7 +245,10 @@
                     @method('DELETE')
                     <input type="hidden" name="access_id" id="access-id-to-delete">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-danger" data-id="{{ $access->id }}" data-toggle="modal" data-target="#delete_modal">
+                           Delete
+                    </button>
+
                 </form>
             </div>
         </div>
@@ -341,12 +368,10 @@ $(document).ready(function() {
 
 $(document).on('click', '.delete-document-btn', function() {
     var accessId = $(this).data('id');
-    var documentName = $(this).data('name');
-    
-    // Mettre à jour le modal avec les informations du document à supprimer
-    $('#document-name-to-delete').text(documentName);
     $('#access-id-to-delete').val(accessId);
 });
+
+
 
 </script>
 @endsection

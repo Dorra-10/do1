@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\UserController;
@@ -20,12 +21,10 @@ Route::get('/', function () {
 });
 
 // Routes accessibles uniquement aux utilisateurs authentifiés
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
-
 });
 
 // Routes accessibles uniquement au admin
@@ -59,6 +58,7 @@ Route::group(['middleware' => ['role:admin']], function () {
      Route::get('/export', [ExportController::class, 'index'])->name('impoexpo.expo.index');
      Route::post('/documents/{id}/lock', [DocumentController::class, 'lock'])->name('documents.lock');
      Route::get('exports/{id}/download', [ExportController::class, 'download'])->name('exports.download');
+     Route::delete('exports/{export}', [ExportController::class, 'destroy'])->name('exports.destroy');
 
 });
 
@@ -88,7 +88,7 @@ Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], func
 
     //History
     Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
-    
+    Auth::routes(['reset' => true]);
 
 });
 
@@ -105,6 +105,7 @@ Route::group(['middleware' => ['role:admin|superviseur']], function () {
     Route::get('/projects/{projectId}/documents', [ProjectController::class, 'getDocumentsByProject']);
 
     Route::delete('/access/delete', [AccessController::class, 'deleteAccess'])->name('access.delete');
+
     Route::get('/edit-access/{permissionId}', [AccessController::class, 'editAccessForm']);
     Route::put('/access/update', [AccessController::class, 'update'])->name('access.update');
     

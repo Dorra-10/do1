@@ -85,7 +85,7 @@ class AccessController extends Controller
         // Envoyer l'email de notification
         Mail::to($user->email)->send(new DocumentAccessNotification($document, $request->permission, $user));
     
-        return redirect()->route('access.index')->with('success', 'Permission donnée avec succès.');
+        return redirect()->route('access.index')->with('success', 'Access granted successfully !');
     }
     
 
@@ -93,17 +93,12 @@ class AccessController extends Controller
     public function deleteAccess(Request $request)
     {
         $accessId = $request->input('access_id');
-
-        // Trouver l'accès par ID
         $access = Access::findOrFail($accessId);
-
-        // Supprimer l'accès
         $access->delete();
-
-        // Rediriger avec un message de succès
-        return redirect()->route('access.index')->with('success', 'Accès supprimé avec succès.');
+    
+        return redirect()->route('access.index')->with('success', 'Access deleted successfully!');
     }
-
+    
     // Afficher le formulaire pour éditer une permission d'accès
     public function editAccessForm($accessId)
     {
@@ -138,7 +133,7 @@ class AccessController extends Controller
         $access->document_id = $request->document_id;
         $access->permission = $request->permission;
         $access->save();
-        return redirect()->route('access.index')->with('success', 'L\'accès a été mis à jour avec succès.');
+        return redirect()->route('access.index')->with('success', 'Access updated successfully !');
     }
     
 }

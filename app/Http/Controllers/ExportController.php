@@ -33,7 +33,7 @@ class ExportController extends Controller
          ]);
  
          // Renvoyer une erreur 404 avec un message clair
-         abort(404, "Le fichier demandé est introuvable. Voir les logs pour plus de détails.");
+         abort(404, "The requested file could not be found.");
      }
  
      // Récupérer l'extension du fichier stocké
@@ -44,28 +44,26 @@ class ExportController extends Controller
     }
     
 
-    public function destroy($id)
+    public function destroy(Export $export)
 {
-    // Trouver le document dans la base de données
-    $document = Document::findOrFail($id);
-
     try {
-        // Supprimer le fichier du stockage (si il existe)
+        // Supprimer le fichier du stockage
         if (Storage::disk('public')->exists($export->path)) {
             Storage::disk('public')->delete($export->path);
         } else {
             return redirect()->route('impoexpo.expo.index')->with('error', 'Le fichier n\'existe pas sur le disque');
         }
 
-        // Utiliser forceDelete pour une suppression définitive (si SoftDeletes est activé)
+        // Suppression définitive
         $export->forceDelete();
 
-        // Retourner un message de succès
-        return redirect()->route('impoexpo.expo.index')->with('status', 'Documents deleted successfully !');
-        
+        return redirect()->route('impoexpo.expo.index')->with('success', 'Export deleted successfully !');
+
     } catch (\Exception $e) {
-        // Gestion des erreurs
-        return redirect()->route('impoexpo.expo.index')->with('error', 'Erreur lors de la suppression du document: ' . $e->getMessage());
+        return redirect()->route('impoexpo.expo.index')->with('error', 'Error while deleting : ' . $e->getMessage());
     }
 }
+
+
+
 }

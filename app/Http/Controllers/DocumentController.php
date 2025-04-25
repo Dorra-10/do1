@@ -155,7 +155,7 @@ class DocumentController extends Controller
         // Enregistrement dans l'historique
         History::recordAction($document->id, 'modify', auth()->id());
 
-        return redirect()->route('documents.index')->with('success', 'Document ajouté avec succès');
+        return redirect()->route('documents.index')->with('success', 'Document added successfully !');
     }
 
     return redirect()->back()->with('error', 'Erreur lors de l\'ajout du document');
@@ -199,56 +199,47 @@ class DocumentController extends Controller
     return Storage::disk('public')->download($filePath, $document->name . '.' . $extension);
    }
    
-   public function edit($id)
-   {
-       // Récupère le document à éditer
-       $editdocument = Document::findOrFail($id);
-   
-       // Récupère tous les projets pour les afficher dans la liste déroulante
-       $projects = Project::all();
-   
-       // Liste des types de fichiers valides
-       $filetypes = [1 => 'pdf', 2 => 'docx', 3 => 'pptx', 4 => 'xls', 5 => 'catia'];
-   
-       // Passe les variables à la vue
-       return view('documents.index', [
-        'editDocument' => $document, // ← changement ici
-        'projects' => $projects,
-        'filetypes' => $filetypes,
+ // Afficher le formulaire d'édition d'un document
+public function edit($id)
+{
+    // Récupérer le document par son ID
+    $document = Document::findOrFail($id);
+
+    // Retourner la vue avec les données du document à éditer
+    return view('documents.edit', compact('document'));
+}
+
+// Mettre à jour un document
+public function update(Request $request, $id)
+{
+    // Valider les données du formulaire
+    $validatedData = $request->validate([
+        'name' => 'required|string|max:255',
+        'project_id' => 'required|exists:projects,id',
+        'owner' => 'required|string|max:255',
+        'company' => 'required|string|max:255',
+        'description' => 'nullable|string|max:1000',
+        'date_added' => 'required|date',
     ]);
-    
-   }
-   
-   public function update(Request $request, Document $document)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'access' => 'nullable|string',
-            'file' => 'nullable|file|mimes:pdf,docx,pptx,xlsx|max:10240',
-        ]);
 
-        $filePath = $document->path;
-        $file_type = $document->file_type;
+    // Trouver le document à mettre à jour
+    $document = Document::findOrFail($id);
 
-        if ($request->hasFile('file')) {
-            if (Storage::disk('public')->exists($document->path)) {
-                Storage::disk('public')->delete($document->path);
-            }
+    // Mettre à jour les informations du document
+    $document->update([
+        'name' => $validatedData['name'],
+        'project_id' => $validatedData['project_id'],
+        'owner' => $validatedData['owner'],
+        'company' => $validatedData['company'],
+        'description' => $validatedData['description'],
+        'date_added' => $validatedData['date_added'],
+    ]);
 
-            $file = $request->file('file');
-            $filePath = $file->storeAs('documents', time() . '_' . $file->getClientOriginalName(), 'public');
-            $file_type = $file->getClientOriginalExtension();
-        }
+    // Retourner une réponse ou rediriger
+    return redirect()->route('documents.index')->with('success', 'Document updated successfully !');
+}
 
-        $document->update([
-            'name' => $request->input('name'),
-            'access' => $request->input('access'),
-            'path' => $filePath,
-            'file_type' => $file_type,
-        ]);
 
-        return redirect()->route('documents.index')->with('success', 'Document mis à jour avec succès');
-    }
 
 
 
@@ -259,7 +250,7 @@ public function revision(Request $request, $id)
     try {
         $document = Document::find($id);
         if (!$document) {
-            return redirect()->back()->with('error', "Document introuvable.");
+            return redirect()->back()->with('error', "Document not found.");
         }
 
         $user = auth()->user();
@@ -270,7 +261,7 @@ public function revision(Request $request, $id)
             ->exists();
 
         if (! $user->hasRole(['admin', 'superviseur']) && !$hasWriteAccess) {
-            return redirect()->back()->with('error', "Vous n'avez pas les permissions pour modifier ce document.");
+            return redirect()->back()->with('error', "You do not have permission to edit this document.");
         }
 
         // ✅ D'abord récupérer le fichier
@@ -340,9 +331,6 @@ public function revision(Request $request, $id)
         return redirect()->back()->with('error', 'Échec de la mise à jour: ' . $e->getMessage());
     }
 }
-
-
-
 
 public function destroy($id)
 {
