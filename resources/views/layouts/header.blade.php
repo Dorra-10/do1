@@ -1,7 +1,7 @@
 <div class="header">
     <div class="header-left p-3">
-        <a href="/" class="logo"> <img src="{{asset('assets/img/logo.png')}}" width="20" height="50" alt="logo"> <span class="logoclass"></span> </a>
-        <a href="/" class="logo logo-small"> <img src="{{asset('assets/img/logo.png')}}" alt="Logo" width="30" height="30"> </a>
+        <a href="/" class="logo"> <img src="{{asset('assets/img/logo.png')}}" width="1" height="40" alt="logo"> <span class="logoclass"></span> </a>
+        <a href="/" class="logo logo-small"> <img src="{{asset('assets/img/logo3.png')}}" alt="Logo" width="30" height="30"> </a>
     </div>
     <a href="javascript:void(0);" id="toggle_btn"> <i class="fe fe-text-align-left"></i> </a>
     <a class="mobile_btn" id="mobile_btn"> <i class="fas fa-bars"></i> </a>

@@ -21,7 +21,7 @@
 		<div class="login-wrapper">
 			<div class="container">
 				<div class="loginbox">
-					<div class="login-left"> <img class="img-fluid" src="" alt="Logo"> </div>
+					<div class="login-left"> <img class="img-fluid" src="assets/img/logo1.png" alt="Logo"> </div>
 					<div class="login-right">
 						<div class="login-right-wrap">
 							<h1 class="mb-3">Register</h1>
@@ -31,6 +31,8 @@
 									<input class="form-control" :value="__('Name')" name="name"  type="text" placeholder="Name"> </div>
 								<div class="form-group">
 									<input class="form-control"  type="email" name="email" :value="__('Email')" placeholder="Email"> </div>
+								<div class="form-group">
+									<input class="form-control"  type="phone_number" name="phone_number" :value="__('Phone Number')" placeholder="Phone Number"> </div>
 								<div class="form-group">
 									<input class="form-control" type="password"
                                     name="password"  :value="__('Password')"  placeholder="Password"> </div>

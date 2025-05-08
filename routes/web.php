@@ -9,7 +9,9 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\AccessController;
 use App\Http\Controllers\HistoryController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\DashboardController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -21,10 +23,10 @@ Route::get('/', function () {
 });
 
 // Routes accessibles uniquement aux utilisateurs authentifiés
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile', [ProfileController::class, 'changePassword'])->name('password.update');
 });
 
 // Routes accessibles uniquement au admin
@@ -59,6 +61,10 @@ Route::group(['middleware' => ['role:admin']], function () {
      Route::post('/documents/{id}/lock', [DocumentController::class, 'lock'])->name('documents.lock');
      Route::get('exports/{id}/download', [ExportController::class, 'download'])->name('exports.download');
      Route::delete('exports/{export}', [ExportController::class, 'destroy'])->name('exports.destroy');
+     Route::get('/import', [ImportController::class, 'index'])->name('impoexpo.impo.index');
+     Route::post('/imports/upload', [ImportController::class, 'upload'])->name('imports.upload');
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('auth');
+
 
 });
 
@@ -88,7 +94,7 @@ Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], func
 
     //History
     Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
-    Auth::routes(['reset' => true]);
+    
 
 });
 

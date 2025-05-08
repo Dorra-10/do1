@@ -25,6 +25,31 @@
             }, 2000);
         </script>
     @endif
+    @if (session('error'))
+    <div id="error-message" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color:rgb(95, 87, 87); 
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        z-index: 9999;
+    ">
+        {{ session('error') }}
+    </div>
+
+    <script>
+        setTimeout(function() {
+            var message = document.getElementById('error-message');
+            if (message) {
+                message.style.display = 'none';
+            }
+        }, 2000);
+    </script>
+@endif
+
 <div class="page-wrapper">
     <div class="content container-fluid">
         <div class="page-header">
@@ -72,8 +97,9 @@
                                         <th>Company</th>
                                         <th>Date</th>
                                         <th>Description</th>
+                                
                                         <th class="text-right">Actions</th>
-                                    </tr>
+                               </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($documents as $document)
@@ -122,9 +148,9 @@
                                                         data-owner="{{ $document->owner }}"
                                                         data-company="{{ $document->company }}"
                                                         data-description="{{ $document->description }}"
-                                                        data-date_added="{{ $document->date_added }}"
+                                                        data-date_added="{{ $document->updated_at }}"
                                                         {{ $isLocked ? '' : 'data-toggle=modal data-target=#editDocumentModal' }}
-                                                        onclick="{{ $isLocked ? 'return false;' : '' }}"
+                                                        
                                                         style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
                                                         title="{{ $isLocked ? 'Document verrouillé' : 'Edit' }}">
                                                         <i class="fas fa-pencil-alt"></i>
@@ -151,9 +177,8 @@
                                                 @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess || $hasReadAccess)
                                                     <a 
                                                         href="{{ $isLocked ? '#' : route('documents.download', $document->id) }}" 
-                                                        class="download-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
-                                                        style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
-                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Download' }}"
+                                                        class="download-document-btn"
+                                                       
                                                     >
                                                         <i class="fas fa-download m-r-5"></i>
                                                     </a>
@@ -162,9 +187,8 @@
                                                 {{-- Icône de révision --}}
                                                 @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
                                                     <a href="{{ $isLocked ? '#' : route('documents.revision', $document->id) }}"
-                                                    class="revision-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
-                                                    style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
-                                                    title="{{ $isLocked ? 'Document verrouillé' : 'Upload' }}"
+                                                    class="revision-document-btn "
+                                                    
                                                     data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
                                                         <i class="fas fa-edit m-r-5"></i> 
                                                     </a>
@@ -196,7 +220,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center">
+                                            <td colspan="9" class="text-center">
                                                 @if (!empty($searchTerm))
                                                     <div class="alert alert-info">
                                                         <i class="fas fa-search"></i> No documents found for "{{ $searchTerm }}"
@@ -220,7 +244,7 @@
                                 </tbody>
 
                             </table>
-                            <div class="d-flex justify-content-center mt-3">
+                            <div class="d-flex justify-content-center mt-6">
                                 {{ $documents->appends(['search' => $searchTerm])->links() }}
                             </div>
                         </div>
@@ -237,7 +261,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addDocumentModalLabel">Add Document</h5>
+                <h5 class="modal-title" id="addDocumentModalLabel">Add</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -308,14 +332,15 @@
                 </button>
             </div>
 
-            <form id="editDocumentForm" method="POST" action="{{ route('documents.update', $document->id) }}">
+            <form id="editDocumentForm" method="POST">
+
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
                     <!-- Document Name -->
                     <div class="form-group">
                         <label for="editName">Document Name</label>
-                        <input type="text" class="form-control" id="editName" name="name" value="{{ old('name', $document->name) }}" required>
+                        <input type="text" class="form-control" id="editName" name="name"  required>
                     </div>
 
                     <!-- Project Selection -->
@@ -324,7 +349,7 @@
                         <select class="form-control" id="editProjectId" name="project_id" required>
                             <option value="">Select Project</option>
                             @foreach($projects as $project)
-                                <option value="{{ $project->id }}" {{ $project->id == $document->project_id ? 'selected' : '' }}>
+                                <option value="{{ $project->id }}" >
                                     {{ $project->name }}
                                 </option>
                             @endforeach
@@ -334,25 +359,25 @@
                     <!-- Owner -->
                     <div class="form-group">
                         <label for="editOwner">Owner</label>
-                        <input type="text" class="form-control" id="editOwner" name="owner" value="{{ old('owner', $document->owner) }}" required>
+                        <input type="text" class="form-control" id="editOwner" name="owner"  required>
                     </div>
                     
                     <!-- Company -->
                     <div class="form-group">
                         <label for="editCompany">Company</label>
-                        <input type="text" class="form-control" id="editCompany" name="company" value="{{ old('company', $document->company) }}" required>
+                        <input type="text" class="form-control" id="editCompany" name="company" required>
                     </div>
                     
                     <!-- Description -->
                     <div class="form-group">
                         <label for="editDescription">Description</label>
-                        <textarea id="editDescription" name="description" rows="4" class="form-control">{{ old('description', $document->description) }}</textarea>
+                        <textarea id="editDescription" name="description" rows="4" class="form-control"></textarea>
                     </div>
 
                     <!-- Date Added -->
                     <div class="form-group">
                         <label for="editDate">Date Added</label>
-                        <input type="date" class="form-control" id="editDate" name="date_added" value="{{ old('date_added', $document->date_added ? \Carbon\Carbon::parse($document->date_added)->format('Y-m-d') : '') }}" required>
+                        <input type="date" class="form-control" id="editDate" name="date_added"  required>
                     </div>
                 </div>
 
@@ -384,7 +409,7 @@
                 <form id="deleteForm" method="POST" action="" style="display: inline;">
                     @csrf
                     @method('DELETE')
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Delete</button>
                     <button type="submit" class="btn btn-danger">Yes</button>
                 </form>
             </div>
@@ -539,28 +564,52 @@ $('.revision-document-btn').click(function() {
         });
 
         // AJAX request for document revision
-        $('#revisionForm').submit(function(e) {
-            e.preventDefault();
-            let formData = new FormData(this);
-            let documentId = $('#revisionForm').attr('action').split('/').pop();
-            
-            $.ajax({
-                url: '/documents/' + documentId + '/revision', 
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    console.log("Document mis à jour avec succès");
-                    $('#revisionModal').modal('hide');
-                    location.reload(); // Reload the page to show updated content
-                },
-                error: function(xhr, status, error) {
-                    console.log("Erreur lors de la mise à jour du document");
-                    $('#fileError').text("Erreur de mise à jour du document.");
-                }
-            });
-        });
+      $('#revisionForm').submit(function(e) {
+    e.preventDefault();
+    let formData = new FormData(this);
+    let documentId = $('#revisionForm').attr('action').split('/').pop();
+
+    $.ajax({
+        url: '/documents/' + documentId + '/revision',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            showAlert(response.success, 'success');
+            $('#revisionModal').modal('hide');
+            setTimeout(() => location.reload(), 1500);
+        },
+        error: function(xhr) {
+            let message = xhr.responseJSON?.error || "Erreur inconnue.";
+            showAlert(message, 'error');
+        }
+    });
+});
+
+// ✅ Fonction pour afficher un message dynamique
+function showAlert(message, type = 'success') {
+    const color = type === 'success' ? 'rgb(68, 97, 89)' : 'rgb(95, 87, 87)';
+    const alertDiv = document.createElement('div');
+    alertDiv.id = 'alert-message';
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.backgroundColor = color;
+    alertDiv.style.color = 'white';
+    alertDiv.style.padding = '15px 25px';
+    alertDiv.style.borderRadius = '5px';
+    alertDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    alertDiv.style.zIndex = 9999;
+    alertDiv.innerText = message;
+
+    document.body.appendChild(alertDiv);
+
+    setTimeout(() => {
+        if (alertDiv) alertDiv.remove();
+    }, 3000);
+}
+
     
 
 
@@ -570,48 +619,38 @@ $('.revision-document-btn').click(function() {
 
 //icone
 // lock.js - Version finale testée
-document.addEventListener('DOMContentLoaded', function() {
-    // Stockage global de l'ID
+document.addEventListener('DOMContentLoaded', function () {
     window.currentLockDocId = null;
 
-    // Ouverture modale
-    window.openLockModal = function(docId) {
+    // Fonction pour ouvrir la modale
+    window.openLockModal = function (docId) {
         window.currentLockDocId = docId;
         $('#lockModal').modal('show');
     };
 
-    // Gestionnaire de clic amélioré
-    document.getElementById('confirmLockBtn').addEventListener('click', async function() {
+    // Lors du clic sur "confirmer"
+    document.getElementById('confirmLockBtn').addEventListener('click', async function () {
         if (!window.currentLockDocId) {
             alert('Aucun document sélectionné');
             return;
         }
 
         try {
-            // Méthode 1 : Récupération via meta tag
+            // Récupération CSRF token
             let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-            
-            // Méthode 2 : Fallback direct pour Laravel
-            if (!csrfToken && window.Laravel?.csrfToken) {
-                csrfToken = window.Laravel.csrfToken;
-            }
-
-            // Méthode 3 : Récupération depuis les cookies
+            if (!csrfToken && window.Laravel?.csrfToken) csrfToken = window.Laravel.csrfToken;
             if (!csrfToken) {
                 const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
                 csrfToken = match ? decodeURIComponent(match[1]) : null;
             }
+            if (!csrfToken) throw new Error('Impossible de récupérer le token CSRF');
 
-            if (!csrfToken) {
-                throw new Error('Impossible de récupérer le token CSRF');
-            }
-
-            // Envoi avec triple protection
+            // Envoi POST
             const response = await fetch(`/documents/${window.currentLockDocId}/lock`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': csrfToken,
-                    'X-XSRF-TOKEN': csrfToken, // Pour les cookies encryptés
+                    'X-XSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
@@ -631,24 +670,49 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const data = await response.json();
-            
-            // Mise à jour UI
+
             if (data.success) {
+                // Mise à jour de l’icône courante
                 const lockIcon = document.getElementById(`lock-icon-${window.currentLockDocId}`);
                 if (lockIcon) {
                     lockIcon.innerHTML = '<i class="fas fa-lock m-r-5" style="color:#03A9F4"></i>';
                     lockIcon.onclick = null;
                 }
+
+                // Désactive tous les autres boutons lock
+                const allLockIcons = document.querySelectorAll('.lock-icon');
+                allLockIcons.forEach(icon => {
+                    icon.style.pointerEvents = 'none'; // Empêche les clics
+                    icon.style.opacity = 0.5; // Optionnel : rend visuellement inactif
+                });
+
                 $('#lockModal').modal('hide');
-                alert('Document verrouillé avec succès');
+
+                // Affichage d’un message flottant de succès
+                const msg = document.createElement('div');
+                msg.textContent = 'Document exported successfulyy';
+                msg.style = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background-color:rgb(86, 109, 103); ;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 5px;
+                    z-index: 10000;
+                `;
+                document.body.appendChild(msg);
+                setTimeout(() => msg.remove(), 2500);
             }
+
         } catch (error) {
             console.error('Échec critique:', error);
             alert(`ERREUR: ${error.message}`);
-            window.location.reload(); // Recharge en cas d'erreur CSRF
+            window.location.reload(); // Rechargement forcé si grave
         }
     });
 });
+
 </script>
 
 <style>

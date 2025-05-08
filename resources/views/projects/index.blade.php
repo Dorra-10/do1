@@ -25,6 +25,31 @@
             }, 2000);
         </script>
     @endif
+    @if (session('error'))
+    <div id="error-message" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color:rgb(95, 87, 87); 
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        z-index: 9999;
+    ">
+        {{ session('error') }}
+    </div>
+
+    <script>
+        setTimeout(function() {
+            var message = document.getElementById('error-message');
+            if (message) {
+                message.style.display = 'none';
+            }
+        }, 2000);
+    </script>
+@endif
+
 <div class="page-wrapper">
     <!-- Page Content -->
     <div class="content container-fluid">
@@ -35,7 +60,7 @@
                     <div class="mt-5">
                         <h4 class="card-title float-left mt-2">Projects</h4>
                         @can('create project')
-                            <a href="#" class="btn btn-primary float-right veiwbutton" data-toggle="modal" data-target="#addProjectModal">Create Project</a>
+                            <a href="#" class="btn btn-primary float-right veiwbutton" data-toggle="modal" data-target="#addProjectModal">Add Project</a>
                         @endcan
                     </div>
                 </div>
@@ -75,7 +100,13 @@
                                         <th>Project Name</th>
                                         <th>Type</th>
                                         <th>Date</th>
-                                        <th class="text-right">Actions</th>
+                                        @auth
+                                        @php $user = auth()->user(); @endphp
+
+                                        @if ($user->hasRole('admin') || $user->hasRole('superviseur'))
+                                            <th class="text-right">Actions</th>
+                                        @endif
+                                    @endauth
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -267,7 +298,7 @@ if ($('#successMessage').length) {
         $('#successMessage').fadeOut('slow', function() {
             $(this).remove();
         });
-    }, 3000); // 3 secondes (tu peux remettre 2000 si tu veux)
+    }, 3000); 
 }
 
 // ✅ Gestion du bouton de suppression de document

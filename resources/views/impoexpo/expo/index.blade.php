@@ -57,7 +57,7 @@
                                     @forelse($exports as $export)
                                         <tr>
                                             <td>{{ $export->id }}</td>
-                                            <td>{{ $export->name }}.{{ $export->file_type }} {{ $export->updated_at->format('d/m/Y H:i') }}</td>
+                                            <td>{{ $export->name }}</td>
                                             <td>{{ $export->project_id }}</td>
                                             <td>{{ $export->owner }}</td>
                                             <td>{{ $export->company }}</td>

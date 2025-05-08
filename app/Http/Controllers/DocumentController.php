@@ -19,194 +19,266 @@ use App\Models\Export;
 class DocumentController extends Controller
 {
     public function index(Request $request)
-    {
-        $user = auth()->user();
-        $searchTerm = $request->input('search', '');
-        $documents = Document::all();
-        // Documents query
-        $documentsQuery = Document::query();
-        $filetypes = [
-            1 => 'pdf',
-            2 => 'docx',
-            3 => 'pptx',
-            4 => 'xls',
-            5 => 'catia',
-        ];
-        
-        if ($user->hasRole(['admin', 'superviseur'])) {
-            // Tous les documents pour admin/superviseur
-            $projects = Project::all();
-        } else {
-            // Restrictions pour les autres utilisateurs
-            $documentsQuery->whereHas('accesses', function ($query) use ($user) {
-                $query->where('user_id', $user->id)
-                      ->whereIn('permission', ['read', 'write']);
-            });
-    
-            $projects = Project::whereHas('documents.accesses', function ($query) use ($user) {
-                $query->where('user_id', $user->id)
-                      ->whereIn('permission', ['read', 'write']);
-            })->get();
-        }
-    
-        // Ajout de la recherche si terme existant
-        if (!empty($searchTerm)) {
-            $documentsQuery->where(function($query) use ($searchTerm) {
-                $query->where('name', 'LIKE', '%'.$searchTerm.'%')
-                      ->orWhere('file_type', 'LIKE', '%'.$searchTerm.'%')
-                      ->orWhereHas('project', function($q) use ($searchTerm) {
-                          $q->where('name', 'LIKE', '%'.$searchTerm.'%');
-                      });
-            });
-        }
-    
-        $documents = $documentsQuery->with('project')
-                                   ->orderBy('date_added', 'desc')
-                                   ->paginate(10);
-    
-        return view('documents.index', compact('documents', 'projects', 'searchTerm','filetypes'));
+{
+    $user = auth()->user();
+    $searchTerm = $request->input('search', '');
+
+    $filetypes = [
+        1 => 'pdf',
+        2 => 'docx',
+        3 => 'pptx',
+        4 => 'xls',
+        5 => 'catia',
+    ];
+
+    // Base de la requête
+    $documentsQuery = Document::query();
+
+    if ($user->hasRole(['admin', 'superviseur'])) {
+        // Tous les documents pour les rôles élevés
+        $projects = Project::all();
+    } else {
+        // Documents accessibles à l'utilisateur
+        $documentsQuery->whereHas('accesses', function ($query) use ($user) {
+            $query->where('user_id', $user->id)
+                  ->whereIn('permission', ['read', 'write']);
+        });
+
+        // Projets liés à ces documents
+        $projects = Project::whereHas('documents.accesses', function ($query) use ($user) {
+            $query->where('user_id', $user->id)
+                  ->whereIn('permission', ['read', 'write']);
+        })->get();
     }
+
+    // Ajout de la recherche
+    if (!empty($searchTerm)) {
+        $documentsQuery->where(function($query) use ($searchTerm) {
+            $query->where('name', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('file_type', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhereHas('project', function($q) use ($searchTerm) {
+                      $q->where('name', 'LIKE', '%' . $searchTerm . '%');
+                  });
+        });
+    }
+
+    // Exécution finale de la requête
+    $documents = $documentsQuery->with('project')
+                                ->orderBy('date_added', 'desc')
+                                ->paginate(10);
+
+    return view('documents.index', compact('documents', 'projects', 'searchTerm', 'filetypes'));
+}
+
+
+
+
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'file' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,catpart,catproduct,cgr|max:20480',
+            'file' => [
+                'required',
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'catpart', 'catproduct', 'cgr', 'stl', 'igs','iges', 'stp','step'];
+                    if (!in_array($ext, $allowed)) {
+                        $fail('Extension non autorisée : .' . $ext);
+                    }
+                }
+            ],
             'project_id' => 'required|exists:projects,id',
             'description' => 'nullable|string',
-            'is_locked' => 'nullable|boolean'
+            'is_locked' => 'nullable|boolean',
+            'company' => 'nullable|string|max:255'
         ]);
-    
+
         DB::beginTransaction();
-    
+
         try {
             $file = $request->file('file');
-            $path = $file->store('documents', 'public');
-    
-            $document = Document::create([
-                'name' => $request->name,
+            $extension = strtolower($file->getClientOriginalExtension());
+            $fileName = $validated['name'] . now()->format('d-m-Y') . '.' . $extension;
+
+            $hash = hash_file('sha256', $file->getRealPath());
+
+            if (Document::where('file_hash', $hash)->exists()) {
+                return back()->with('error', 'This document already exists !');
+            }
+
+            $path = $file->storeAs('documents', $fileName, 'public');
+
+            Document::create([
+                'name' => $fileName,
+                'file_type' => $extension,
+                'file_hash' => $hash,
                 'path' => $path,
-                'file_type' => $file->extension(),
-                'project_id' => $request->project_id,
+                'project_id' => $validated['project_id'],
                 'owner' => auth()->id(),
-                'company' => $request->company,
-                'description' => $request->description,
-                'is_locked' => $request->is_locked ?? false,
+                'company' => $validated['company'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'is_locked' => $validated['is_locked'] ?? false,
                 'date_added' => now()
             ]);
-    
+
             DB::commit();
-    
-            return redirect()->route('documents.index')
-                           ->with('success', 'Document créé avec succès');
-    
+            return redirect()->route('documents.index')->with('success', 'Document created successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Erreur lors de la création: ' . $e->getMessage());
+            return back()->with('error', 'Erreur lors de la création : ' . $e->getMessage());
         }
     }
-   
+
+    
+  
     public function upload(Request $request)
 {
-    // Validation des données
-    $request->validate([
-        'document' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,xlsx,xls,catpart,stl,igs,stp|max:20480',
-        'project_id' => 'required|exists:projects,id',
-        'name' => 'required|string|max:255',
-        'access' => 'nullable|string|max:255',
-        'owner' => 'nullable|string|max:255',
-        'company' => 'nullable|string|max:255',
-        'description' => 'nullable|string',
-    ]);
+        $validated = $request->validate([
+            'document' => [
+                'required',
+                'file',
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xlsx', 'xls', 'catpart', 'catproduct', 'cgr', 'stl', 'igs', 'iges', 'stp', 'step'];
+                    if (!in_array($ext, $allowed)) {
+                        $fail('Unauthorized extension: .' . $ext);
+                    }
+                }
+            ],
+            'project_id' => 'required|exists:projects,id',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($request) {
+                    // Extract the base name (without date and extension) from the input name
+                    $baseName = $value;
 
-    // Vérification si un fichier est présent
-    if ($request->hasFile('document')) {
+                    // Check for existing documents globally
+                    $existingDocuments = Document::all();
+
+                    foreach ($existingDocuments as $doc) {
+                        // Extract the base name from the existing document's name (e.g., FinalTest.. from FinalTest..05-05-2025.pptx)
+                        $nameParts = explode('.', $doc->name);
+                        $docExtension = array_pop($nameParts); // Remove the extension
+                        $docBaseNameWithDots = implode('.', array_slice($nameParts, 0, -1)); // Remove the date part
+                        $docBaseName = $docBaseNameWithDots;
+
+                        // Compare the base names
+                        if ($baseName === $docBaseName) {
+                            $fail('A document with this base name already exists globally, regardless of date or extension.');
+                            return back()->with('error', 'A document with this base name already exists!');
+                        }
+                    }
+                }
+            ],
+            'access' => 'nullable|string|max:255',
+            'owner' => 'nullable|string|max:255',
+            'company' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
         $file = $request->file('document');
-        $fileExtension = $file->getClientOriginalExtension();  // Extension du fichier
-        $fileName = $request->name . '.' . $fileExtension;
+        $extension = strtolower($file->getClientOriginalExtension());
+        $fileName = $validated['name'] . '.' . now()->format('d-m-Y') . '.' . $extension;
 
-        // Stockage du fichier dans le dossier public
+        $hash = hash_file('sha256', $file->getRealPath());
+
+        // Check if a document with the same hash already exists
+        if (Document::where('file_hash', $hash)->exists()) {
+            return back()->with('error', 'This document already exists!');
+        }
+
+        // Store the file
         $path = $file->storeAs('documents', $fileName, 'public');
 
-        // Définir un type de fichier basé sur l'extension
-        $fileType = match ($fileExtension) {
+        // Determine the file type ID based on extension
+        $fileType = match ($extension) {
             'pdf' => 1,
-            'docx' => 2,
-            'pptx' => 3,
+            'docx', 'doc' => 2,
+            'pptx', 'ppt' => 3,
             'xlsx', 'xls' => 4,
             default => null,
         };
 
         if (!$fileType) {
-            return redirect()->back()->with('error', 'Type de fichier non valide');
+            $fileType = 0;
         }
 
-        // Création du document avec les informations validées
+        // Create the document record
         $document = Document::create([
-            'name' => $request->name,
+            'name' => $fileName,
             'type_id' => $fileType,
-            'file_type' => $fileExtension,
-            'project_id' => $request->project_id,
+            'file_hash' => $hash,
+            'file_type' => $extension,
+            'project_id' => $validated['project_id'],
             'path' => $path,
-            'owner' => $request->owner,
-            'company' => $request->company,
-            'description' => $request->description,
+            'owner' => $validated['owner'] ?? auth()->id(),
+            'company' => $validated['company'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'date_added' => now()
         ]);
 
-        // Enregistrement dans l'historique
-        History::recordAction($document->id, 'modify', auth()->id());
+        // Record the history
+      
 
-        return redirect()->route('documents.index')->with('success', 'Document added successfully !');
-    }
-
-    return redirect()->back()->with('error', 'Erreur lors de l\'ajout du document');
+        return redirect()->route('documents.index')->with('success', 'Document created successfully!');
 }
 
-    
 
     public function download($id)
-   {
-    // Récupération du document
-    $document = Document::findOrFail($id);  // Trouver le document ou renvoyer une erreur 404
-    History::recordAction($document->id, 'view', auth()->id());
-    // Nettoyage du chemin du fichier (assurer que les slashes sont corrects)
-    $filePath = str_replace('\\', '/', ltrim($document->path, '/'));
+    {
+        // Retrieve the document
+        $document = Document::findOrFail($id); // Find the document or throw a 404 error
+        History::recordAction($document->id, 'view', auth()->id());
 
-    // Vérification si le fichier existe dans le stockage
-    if (!Storage::disk('public')->exists($filePath)) {
-        // Log de l'erreur si le fichier n'existe pas
-        logger()->error('Fichier introuvable', [
-            'requested_file' => $filePath,
-            'storage_root' => storage_path('app/public'),
-            'file_exists' => file_exists(storage_path('app/public/'.$filePath)),
-            'document_data' => $document->toArray()
-        ]);
+        // Clean the file path (ensure slashes are correct)
+        $filePath = str_replace('\\', '/', ltrim($document->path, '/'));
 
-        // Renvoyer une erreur 404 avec un message clair
-        abort(404, "Le fichier demandé est introuvable. Voir les logs pour plus de détails.");
+        // Check if the file exists in storage
+        if (!Storage::disk('public')->exists($filePath)) {
+            // Log the error if the file does not exist
+            logger()->error('File not found', [
+                'requested_file' => $filePath,
+                'storage_root' => storage_path('app/public'),
+                'file_exists' => file_exists(storage_path('app/public/'.$filePath)),
+                'document_data' => $document->toArray()
+            ]);
+
+            // Return a 404 error with a clear message
+            abort(404, "The requested file could not be found. Check the logs for more details.");
+        }
+
+        // Get the file extension
+        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+
+        // Generate a unique token for this download
+        $downloadToken = Str::uuid()->toString();
+        
+        // Store the token in the session, associated with the document ID
+        session()->put("download_token_{$id}", $downloadToken);
+
+        // Update the view history
+        $history = History::firstOrNew(['document_id' => $document->id]);
+        $history->document_name = $document->name;
+        $history->last_viewed_by = Auth::id(); // Get the authenticated user
+        $history->last_viewed_at = now();
+        $history->save();
+
+        // Download the file with its original name and extension
+        return Storage::disk('public')->download($filePath, $document->name);
     }
 
-    // Récupérer l'extension du fichier stocké
-    $extension = pathinfo($filePath, PATHINFO_EXTENSION);
-     
-    // 🔄 Mise à jour de l'historique de consultation
-    $history = History::firstOrNew(['document_id' => $document->id]);
-    $history->document_name = $document->name;
-    $history->last_viewed_by = Auth::id(); // ✅ récupère l'utilisateur connecté
-    $history->last_viewed_at = now();
-    $history->save();
-    
-    // Télécharger le fichier avec son nom d'origine et son extension
-    return Storage::disk('public')->download($filePath, $document->name . '.' . $extension);
-   }
    
  // Afficher le formulaire d'édition d'un document
 public function edit($id)
 {
     // Récupérer le document par son ID
     $document = Document::findOrFail($id);
-
+    $projects = Project::all();
     // Retourner la vue avec les données du document à éditer
-    return view('documents.edit', compact('document'));
+    return view('documents.edit', compact('document','projects'));
 }
 
 // Mettre à jour un document
@@ -239,10 +311,6 @@ public function update(Request $request, $id)
     return redirect()->route('documents.index')->with('success', 'Document updated successfully !');
 }
 
-
-
-
-
 public function revision(Request $request, $id)
 {
     DB::beginTransaction();
@@ -250,23 +318,43 @@ public function revision(Request $request, $id)
     try {
         $document = Document::find($id);
         if (!$document) {
-            return redirect()->back()->with('error', "Document not found.");
+            return $request->ajax()
+                ? response()->json(['error' => 'Document not found.'], 404)
+                : redirect()->back()->with('error', 'Document not found.');
         }
 
         $user = auth()->user();
 
-        $hasWriteAccess = $document->accesses()
-            ->where('user_id', $user->id)
-            ->where('permission', 'write')
-            ->exists();
-
-        if (! $user->hasRole(['admin', 'superviseur']) && !$hasWriteAccess) {
-            return redirect()->back()->with('error', "You do not have permission to edit this document.");
+        // Check if a download token exists for this document
+        $downloadToken = session()->get("download_token_{$id}");
+        if (!$downloadToken) {
+            $msg = "You must first download the original file before modifying and re-uploading it.";
+            return $request->ajax()
+                ? response()->json(['error' => $msg], 400)
+                : redirect()->back()->with('error', $msg);
         }
 
-        // ✅ D'abord récupérer le fichier
+        // Custom validation
         $request->validate([
-            'file' => 'required|file|mimes:pdf,doc,docx,ppt,pptx,xlsx,xls,catpart,stl,igs,stp|max:20480',
+            'file' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if (!($value instanceof \Illuminate\Http\UploadedFile)) {
+                        return $fail('The field must contain a valid file.');
+                    }
+
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xlsx', 'xls', 'catpart', 'stl', 'igs', 'iges', 'stp', 'step'];
+                    if (!in_array($ext, $allowed)) {
+                        $fail('Unauthorized extension: .' . $ext);
+                    }
+
+                    // Max size 20 MB
+                    if ($value->getSize() > 20 * 1024 * 1024) {
+                        $fail('The file must not exceed 20 MB.');
+                    }
+                }
+            ]
         ]);
 
         $file = $request->file('file');
@@ -274,48 +362,77 @@ public function revision(Request $request, $id)
         $oldName = strtolower(trim($document->name));
         $newName = strtolower(trim($file->getClientOriginalName()));
 
-        // ✅ Comparer les noms complets avec extension
         if ($oldName !== $newName) {
-            return redirect()->back()->with('error', "Le nom du fichier doit être exactement le même que l'ancien : '{$document->name}'.");
+            $msg = "The file name must be exactly the same as the old one: {$document->name}";
+            return $request->ajax()
+                ? response()->json(['error' => $msg], 400)
+                : redirect()->back()->with('error', $msg);
         }
 
-        $extension = $file->getClientOriginalExtension();
+        $extension = strtolower($file->getClientOriginalExtension());
 
         if ($extension !== $document->file_type) {
-            return redirect()->back()->with('error', "Le type de fichier doit être le même que l'ancien : '{$document->file_type}'.");
+            $msg = "The file type must be the same as the old one: '{$document->file_type}'.";
+            return $request->ajax()
+                ? response()->json(['error' => $msg], 400)
+                : redirect()->back()->with('error', $msg);
         }
 
-        $oldPath = $document->path;
+        // Calculate the hash of the new file
+        $newHash = hash_file('sha256', $file->getRealPath());
 
-        // 🔥 Supprimer l'ancien fichier s'il existe
+        // Check if the file is identical (same hash)
+        if ($newHash === $document->file_hash) {
+            $msg = "The file is identical to the original. No changes detected.";
+            return $request->ajax()
+                ? response()->json(['error' => $msg], 400)
+                : redirect()->back()->with('error', $msg);
+        }
+
+        // Delete the old file
+        $oldPath = $document->path;
         if ($oldPath && Storage::disk('public')->exists($oldPath)) {
             Storage::disk('public')->delete($oldPath);
         }
 
-        // 📥 Stocker le nouveau fichier
+        // Store the new file
         $newStoragePath = 'documents/' . time() . '.' . $extension;
         Storage::disk('public')->put($newStoragePath, file_get_contents($file->getRealPath()));
 
         if (!Storage::disk('public')->exists($newStoragePath)) {
-            throw new \Exception("Le fichier n'a pas pu être enregistré.");
+            throw new \Exception("The file could not be saved.");
         }
 
-        // 📝 Mettre à jour le document
-        $document->update([
-            'name' => $file->getClientOriginalName(),
-            'file_type' => $extension,
-            'path' => $newStoragePath,
-            'updated_at' => now(),
-        ]);
+        $nameParts = explode('.', $document->name);
+            $extension = array_pop($nameParts); // Get the extension (e.g., pptx)
+            $baseNameWithDots = implode('.', array_slice($nameParts, 0, -1)); // Get the base name up to the date (e.g., FinalTest.)
+            $baseName = $baseNameWithDots; // Keep the dots as per your example (FinalTest..)
 
-        History::recordAction($document->id, 'modify', auth()->id());
+            // Append the new date in DD-MM-YYYY format
+            $newDate = now()->format('d-m-Y');
+            $newNameWithDate = "{$baseName}.{$newDate}.{$extension}";
 
-        // 🕒 Historique
+            // Update the document with the updated name
+            $document->update([
+                'name' => $newNameWithDate,
+                'file_type' => $extension,
+                'file_hash' => $newHash,
+                'path' => $newStoragePath,
+                'version' => $document->version + 1,
+                'updated_at' => now(),
+            ]);
+
+        // Record the history
+        History::recordAction($document->id, 'modify', $user->id);
+
         $history = History::firstOrNew(['document_id' => $document->id]);
         $history->document_name = $document->name;
         $history->last_modified_at = now();
         $history->last_modified_by = $user->id;
         $history->save();
+
+        // Clear the download token from the session after successful upload
+        session()->forget("download_token_{$id}");
 
         DB::commit();
 
@@ -324,15 +441,27 @@ public function revision(Request $request, $id)
             opcache_reset();
         }
 
-        return redirect()->back()->with('success', 'Fichier mis à jour avec succès.');
+        return $request->ajax()
+            ? response()->json(['success' => 'Content updated successfully!'])
+            : redirect()->back()->with('success', 'Content updated successfully!');
 
     } catch (\Exception $e) {
         DB::rollBack();
-        return redirect()->back()->with('error', 'Échec de la mise à jour: ' . $e->getMessage());
+        $msg = 'Update failed: ' . $e->getMessage();
+
+        return $request->ajax()
+            ? response()->json(['error' => $msg], 500)
+            : redirect()->back()->with('error', $msg);
     }
 }
 
-public function destroy($id)
+
+
+
+
+
+
+    public function destroy($id)
 {
     // Trouver le document dans la base de données
     $document = Document::findOrFail($id);
@@ -383,7 +512,7 @@ public function lock(Request $request, $id)
     }
 
     // Fallback classique
-    return redirect()->back()->with('success', 'Document verrouillé et exporté avec succès.');
+    return redirect()->route('documents.index')->with('success', 'Document successfully locked and exported.');
 }
 
 

@@ -1,6 +1,15 @@
 @extends('layouts.app')
 
 @section('content')
+@if ($errors->any())
+    <div class="alert alert-danger">
+        <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 	 <div class="page-wrapper">
 		<div class="content container-fluid">
 			<div class="page-header">
@@ -21,6 +30,10 @@
 						<div class="form-group">
 							<label>Email <span class="text-danger">*</span></label>
 							<input class="form-control" type="email" name="email" required>
+						</div>
+						<div class="form-group">
+							<label>Phone Number<span class="text-danger">*</span></label>
+							<input class="form-control" type="text" name="phone_number" required>
 						</div>
 						<div class="form-group">
 							<label>Password <span class="text-danger">*</span></label>

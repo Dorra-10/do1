@@ -35,22 +35,32 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
+            'phone_number' => 'nullable|string|max:30|unique:users,phone_number',
             'password' => 'required|string|min:8|max:20',
             'roles' => 'required'
+        ], [
+            'email.unique' => 'User already exists with this email.',
+            'phone_number.unique' => 'User already exists with this phone number.',
         ]);
     
+        // Création de l'utilisateur
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'phone_number' => $request->phone_number,
             'password' => Hash::make($request->password),
         ]);
-
+    
+        // Synchronisation des rôles
         $user->syncRoles($request->roles); 
+    
+        // Notification
         $user->notify(new \App\Notifications\SendNewUserCredentials($request->password));
-
-        return redirect('/users')->with('status','User created successfully with roles');
+    
+        // Redirection avec message de succès
+        return redirect()->route('role-permission.user.index')->with('success', 'User created successfully with roles');
     }
-
+    
     public function edit(User $user)
     {
         $roles = Role::pluck('name','name')->all();
@@ -67,37 +77,42 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'password' => 'nullable|string|min:8|max:20',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'phone_number' => 'nullable|string|max:30',
             'roles' => 'required'
         ]);
-
+    
         $data = [
             'name' => $request->name,
             'email' => $request->email,
+            'phone_number' => $request->phone_number,
         ];
-
+    
         if(!empty($request->password)){
             $data += [
                 'password' => Hash::make($request->password),
             ];
         }
-
+    
         $user->update($data);
         $user->syncRoles($request->roles);
-
-        return redirect('/users')->with('status','User Updated Successfully with roles');
+    
+        return redirect()->route('role-permission.user.index')->with('success', 'User Updated Successfully with roles');
     }
+    
 
     public function destroy($id)
-{
-    $user = User::find($id);
+    {
+        $user = User::find($id);
+        
+        if (!$user) {
+            return redirect()->route('role-permission.user.index')->with('error', 'User not found');
+        }
     
-    if (!$user) {
-        return response()->json(['error' => 'User not found'], 404);
+        $user->delete();
+        
+        return redirect()->route('role-permission.user.index')->with('success', 'User deleted successfully');
     }
-
-    $user->delete();
     
-    return response()->json(['success' => 'User deleted successfully']);
-}
 
 }

@@ -8,9 +8,7 @@
                 <div class="col">
                     <div class="mt-5">
                         <h4 class="card-title float-left mt-2">Roles</h4>
-                        @can('create role')
-                        <a href="{{ url('roles/create') }}" class="btn btn-primary float-right veiwbutton">Add role</a>
-                        @endcan
+                       
                     </div>
                 </div>
             </div>
@@ -37,8 +35,7 @@
                                     <tr>
                                         <th>Role ID</th>
                                         <th>Name</th>
-                                        <th>Add Permissions</th>
-                                        <th class="text-right">Actions</th>
+                                       
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -46,23 +43,6 @@
                                     <tr>
                                         <td>{{ $role->id }}</td>
                                         <td>{{ $role->name }}</td>
-                                        <td>
-                                            <div class="actions">
-                                                <a href="{{ url('roles/'.$role->id.'/give-permissions') }}" class="btn btn-sm bg-success-light mr-2">Add / Edit Role Permission</a>
-                                            </div>
-                                        </td>
-                                        <td class="text-right">
-                                            @can('update role')
-                                            <a href="{{ url('roles/'.$role->id.'/edit') }}">
-                                                <i class="fas fa-pencil-alt m-r-5"></i> 
-                                            </a>
-                                            @endcan
-                                            @can('delete role')
-                                            <a href="#" class="delete-btn" data-toggle="modal" data-target="#deletRoleModal" data-url="{{ url('roles/'.$role->id.'/delete') }}">
-                                                <i class="fas fa-trash-alt m-r-5"></i>
-                                            </a>
-                                            @endcan     
-                                        </td>
                                     </tr>
                                     @endforeach                               
                                 </tbody>

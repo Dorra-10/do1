@@ -16,24 +16,24 @@ class DocumentAccessNotification extends Mailable
 
     public $document;
     public $permission;
-    public $user;  
+    public $user;
 
     public function __construct(Document $document, $permission, $user)
     {
         $this->document = $document;
         $this->permission = $permission;
-        $this->user = $user;  
+        $this->user = $user;
     }
 
     public function build()
     {
-        return $this->subject('Nouveau document avec accès')
+        return $this->subject('New document with access')
                     ->view('emails.document_access_notification')
                     ->with([
-                        'user' => $this->user,  
+                        'user' => $this->user,
                         'document' => $this->document,
                         'permission' => $this->permission,
                     ]);
     }
-
 }
+

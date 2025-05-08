@@ -40,7 +40,7 @@ class ExportController extends Controller
      $extension = pathinfo($filePath, PATHINFO_EXTENSION);
     
      // Télécharger le fichier avec son nom d'origine et son extension
-     return Storage::disk('public')->download($filePath, $export->name . '.' . $extension);
+     return Storage::disk('public')->download($filePath, $export->name);
     }
     
 

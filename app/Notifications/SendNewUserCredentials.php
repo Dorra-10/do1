@@ -28,15 +28,15 @@ class SendNewUserCredentials extends Notification
         ], false));
     
         return (new MailMessage)
-        ->subject('Votre compte a été créé avec succès')
-        ->greeting('Bonjour ' . $notifiable->name . ',')
-        ->line('Un compte a été créé pour vous sur notre application.')
-        ->line('Voici vos identifiants de connexion :')
+        ->subject('Your account has been successfully created')
+        ->greeting('Good Morning' . $notifiable->name . ',')
+        ->line('An account has been created for you on our application.')
+        ->line('Here are your login details:')
         ->line('Email : ' . $notifiable->email)
-        ->line('Mot de passe : ' . $this->password)
+        ->line('Password : ' . $this->password)
         ->action('Reset Password', $resetUrl)
         ->line('👉 [Login](' . url('/login') . ')')
-        ->line('Ce lien expirera dans 60 minutes.');
+        ->line('This link will expire in 60 minutes.');
 
 }
 }

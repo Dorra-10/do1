@@ -52,52 +52,85 @@ class AccessController extends Controller
 
     // Donner un accès à un utilisateur
     public function giveAccess(Request $request)
-    {
-        // Valider les données envoyées
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'project_id' => 'required|exists:projects,id',
-            'document_id' => 'required|exists:documents,id',
-            'permission' => 'required|in:read,write',
-        ]);
-    
-        // Récupérer l'utilisateur et le document
-        $user = User::find($request->user_id);
-        $document = Document::find($request->document_id);
-    
-        // Vérifier si l'utilisateur ou le document est introuvable
+{
+    // Valider les données
+    $request->validate([
+        'user_id' => 'required|array', // L'utilisateur peut être un tableau
+        'user_id.*' => 'exists:users,id', // Chaque utilisateur dans le tableau doit exister
+        'project_id' => 'required|exists:projects,id',
+        'document_id' => 'required|exists:documents,id',
+        'permission' => 'required|in:read,write',
+    ]);
+
+    // Récupérer le document en fonction de l'ID du projet et du document
+    $document = Document::findOrFail($request->document_id);
+
+    // Récupérer les utilisateurs pour lesquels on va donner l'accès
+    $users = User::whereIn('id', $request->user_id)->get();
+
+    // Créer l'accès pour chaque utilisateur
+    foreach ($users as $user) {
+        // Vérifiez si l'utilisateur est valide avant de continuer
         if (!$user) {
-            return redirect()->back()->with('error', 'Utilisateur introuvable.');
+            continue; // Si l'utilisateur est invalide, passez à l'utilisateur suivant
         }
-    
-        if (!$document) {
-            return redirect()->back()->with('error', 'Document introuvable.');
+
+        $exists = Access::where('user_id', $user->id)
+                        ->where('project_id', $request->project_id)
+                        ->where('document_id', $request->document_id)
+                        ->exists();
+
+        if ($exists) {
+            continue; // Passer à l'utilisateur suivant s'il a déjà l'accès
         }
-    
-        // Enregistrer la permission dans la table 'accesses'
-        $access = new Access();
-        $access->user_id = $request->user_id;
-        $access->project_id = $request->project_id;
-        $access->document_id = $request->document_id;
-        $access->permission = $request->permission;
-        $access->save();
-    
-        // Envoyer l'email de notification
-        Mail::to($user->email)->send(new DocumentAccessNotification($document, $request->permission, $user));
-    
-        return redirect()->route('access.index')->with('success', 'Access granted successfully !');
+
+        // Créer l'accès pour l'utilisateur
+        Access::create([
+            'user_id' => $user->id,
+            'project_id' => $request->project_id,
+            'document_id' => $request->document_id,
+            'permission' => $request->permission,
+        ]);
+
+        // Envoyer un email à chaque utilisateur avec son nom
+        if ($user && $user->email) {
+            \Mail::to($user->email)->send(new DocumentAccessNotification($document, $request->permission, $user));
+        }
     }
+
+    return redirect()->route('access.index')->with('success', 'Access granted to selected users successfully!');
+}
+
+
+
     
+
+    
+    
+
+    
+
 
     // Supprimer un accès
     public function deleteAccess(Request $request)
-    {
-        $accessId = $request->input('access_id');
-        $access = Access::findOrFail($accessId);
-        $access->delete();
-    
-        return redirect()->route('access.index')->with('success', 'Access deleted successfully!');
+{
+    $accessId = $request->input('access_id');
+
+    if (!$accessId) {
+        return redirect()->route('access.index')->with('error', 'Aucun ID fourni.');
     }
+
+    $access = Access::find($accessId);
+
+    if (!$access) {
+        return redirect()->route('access.index')->with('error', 'Access not found.');
+    }
+
+    $access->delete();
+
+    return redirect()->route('access.index')->with('success', 'Access deleted successfully !');
+}
+
     
     // Afficher le formulaire pour éditer une permission d'accès
     public function editAccessForm($accessId)
@@ -116,24 +149,20 @@ class AccessController extends Controller
 
     // Mettre à jour un accès
     public function update(Request $request)
-    {
-        // Validation des données
-        $request->validate([
-            'access_id' => 'required|exists:accesses,id',
-            'user_id' => 'required|exists:users,id',
-            'project_id' => 'required|exists:projects,id',
-            'document_id' => 'required|exists:documents,id',
-            'permission' => 'required|in:read,write',
-        ]);
+{
+    // Validation des données
+    $request->validate([
+        'access_id' => 'required|exists:accesses,id',
+        'permission' => 'required|in:read,write',
+    ]);
 
-        // Trouver l'accès et mettre à jour les données
-        $access = Access::findOrFail($request->access_id);
-        $access->user_id = $request->user_id;
-        $access->project_id = $request->project_id;
-        $access->document_id = $request->document_id;
-        $access->permission = $request->permission;
-        $access->save();
-        return redirect()->route('access.index')->with('success', 'Access updated successfully !');
-    }
+    // Trouver l'accès et mettre à jour uniquement le type de permission
+    $access = Access::findOrFail($request->access_id);
+    $access->permission = $request->permission;
+    $access->save();
+
+    return redirect()->route('access.index')->with('success', 'Access type updated successfully!');
+}
+
     
 }

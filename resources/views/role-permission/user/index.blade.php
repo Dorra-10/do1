@@ -1,6 +1,54 @@
 @extends('layouts.app')
 
 @section('content')
+@if (session('success'))
+        <div id="success-message" style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color:rgb(86, 109, 103);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 9999;
+        ">
+            {{ session('success') }}
+        </div>
+
+        <script>
+            setTimeout(function() {
+                var message = document.getElementById('success-message');
+                if (message) {
+                    message.style.display = 'none';
+                }
+            }, 2000);
+        </script>
+    @endif
+    @if (session('error'))
+    <div id="error-message" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color:rgb(95, 87, 87); 
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        z-index: 9999;
+    ">
+        {{ session('error') }}
+    </div>
+
+    <script>
+        setTimeout(function() {
+            var message = document.getElementById('error-message');
+            if (message) {
+                message.style.display = 'none';
+            }
+        }, 2000);
+    </script>
+@endif
 <div class="page-wrapper">
     <div class="content container-fluid">
         <div class="page-header">
@@ -9,22 +57,13 @@
                     <div class="mt-5">
                         <h4 class="card-title float-left mt-2">Users</h4>
                         @can('create user')
-                        <a href="{{ url('users/create') }}" class="btn btn-primary float-right veiwbutton">Add user</a>
+                        <a href="{{ url('users/create') }}" class="btn btn-primary float-right ">Add user</a>
                         @endcan
                     </div>
                 </div>
             </div> 
-            @if (session('status'))
-    <div id="successMessage" class="alert alert-success">
-        {{ session('status') }}
-    </div>
-    <script>
-        // Faire disparaître le message après 2 secondes
-        setTimeout(function() {
-            document.getElementById('successMessage').style.display = 'none';
-        }, 2000);
-    </script>
-@endif
+</div>
+            
 <div class="row mb-3">
 <div class="col-sm-12 col-md-6">
 <form method="GET" action="{{ route('role-permission.user.index') }}" class="form-inline">
@@ -49,6 +88,7 @@
                                         <th>User ID</th>
                                         <th>Name</th>
                                         <th>Email</th>
+                                        <th>Phone Number</th>
                                         <th>Roles</th>
                                         <th class="text-right">Actions</th>
                                     </tr>
@@ -59,6 +99,7 @@
                                         <td>{{ $user->id }}</td>
                                         <td>{{ $user->name }}</td>
                                         <td>{{ $user->email }}</td>
+                                        <td>{{ $user->phone_number }}</td>
                                         <td class="text-left">
                                             @foreach ($user->getRoleNames() as $rolename)
                                                 <span class="badge badge-pill bg-success inv-badge">{{ $rolename }}</span>
