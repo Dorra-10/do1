@@ -25,7 +25,6 @@ class AccessController extends Controller
         return view('access.index', compact('accesses', 'users', 'projects', 'documents'));
     }
 
-    // Afficher le formulaire pour donner un accès
     public function giveAccessForm(Request $request)
     {
         $users = User::all();
@@ -55,36 +54,32 @@ class AccessController extends Controller
 {
     // Valider les données
     $request->validate([
-        'user_id' => 'required|array', // L'utilisateur peut être un tableau
-        'user_id.*' => 'exists:users,id', // Chaque utilisateur dans le tableau doit exister
+        'user_id' => 'required|array',
+        'user_id.*' => 'exists:users,id',
         'project_id' => 'required|exists:projects,id',
         'document_id' => 'required|exists:documents,id',
         'permission' => 'required|in:read,write',
     ]);
 
-    // Récupérer le document en fonction de l'ID du projet et du document
     $document = Document::findOrFail($request->document_id);
-
-    // Récupérer les utilisateurs pour lesquels on va donner l'accès
     $users = User::whereIn('id', $request->user_id)->get();
 
-    // Créer l'accès pour chaque utilisateur
-    foreach ($users as $user) {
-        // Vérifiez si l'utilisateur est valide avant de continuer
-        if (!$user) {
-            continue; // Si l'utilisateur est invalide, passez à l'utilisateur suivant
-        }
+    $alreadyExists = [];
+    $granted = [];
 
+    foreach ($users as $user) {
+        // Vérifier si l'accès existe déjà
         $exists = Access::where('user_id', $user->id)
-                        ->where('project_id', $request->project_id)
-                        ->where('document_id', $request->document_id)
-                        ->exists();
+            ->where('project_id', $request->project_id)
+            ->where('document_id', $request->document_id)
+            ->exists();
 
         if ($exists) {
-            continue; // Passer à l'utilisateur suivant s'il a déjà l'accès
+            $alreadyExists[] = $user->name ?? $user->email ?? 'User ID ' . $user->id;
+            continue;
         }
 
-        // Créer l'accès pour l'utilisateur
+        // Créer l'accès
         Access::create([
             'user_id' => $user->id,
             'project_id' => $request->project_id,
@@ -92,45 +87,41 @@ class AccessController extends Controller
             'permission' => $request->permission,
         ]);
 
-        // Envoyer un email à chaque utilisateur avec son nom
-        if ($user && $user->email) {
+        $granted[] = $user->name ?? $user->email ?? 'User ID ' . $user->id;
+
+        // Envoyer l'email
+        if ($user->email) {
             \Mail::to($user->email)->send(new DocumentAccessNotification($document, $request->permission, $user));
         }
     }
 
-    return redirect()->route('access.index')->with('success', 'Access granted to selected users successfully!');
+    // Préparer les messages
+    $messages = [];
+
+    if (!empty($granted)) {
+        $messages[] = count($granted) . ' access(es) granted successfully.';
+    }
+
+    if (!empty($alreadyExists)) {
+        $messages[] = 'Access already exists for: ' . implode(', ', $alreadyExists);
+    }
+
+    return redirect()->route('access.index')->with('success', implode(' ', $messages));
 }
 
 
-
-    
-
-    
-    
-
-    
 
 
     // Supprimer un accès
     public function deleteAccess(Request $request)
-{
-    $accessId = $request->input('access_id');
-
-    if (!$accessId) {
-        return redirect()->route('access.index')->with('error', 'Aucun ID fourni.');
+    {
+        $accessId = $request->input('access_id');
+        $access = Access::findOrFail($accessId);
+        $access->delete();
+    
+        return redirect()->route('access.index')->with('success', 'Access revoked successfully!');
     }
-
-    $access = Access::find($accessId);
-
-    if (!$access) {
-        return redirect()->route('access.index')->with('error', 'Access not found.');
-    }
-
-    $access->delete();
-
-    return redirect()->route('access.index')->with('success', 'Access deleted successfully !');
-}
-
+    
     
     // Afficher le formulaire pour éditer une permission d'accès
     public function editAccessForm($accessId)

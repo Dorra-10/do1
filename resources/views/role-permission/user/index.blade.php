@@ -90,7 +90,13 @@
                                         <th>Email</th>
                                         <th>Phone Number</th>
                                         <th>Roles</th>
-                                        <th class="text-right">Actions</th>
+                                        @auth
+                                        @php $user = auth()->user(); @endphp
+
+                                        @if ($user->hasRole('admin'))
+                                            <th class="text-right">Actions</th>
+                                        @endif
+                                    @endauth
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -142,8 +148,8 @@
                 <div class="modal-body text-center">
                     <h3 class="delete_class">Are you sure you want to delete this user?</h3>
                     <div class="m-t-20">
-                        <a href="#" class="btn btn-white" data-dismiss="modal">No</a>
-                        <button type="button" id="confirm_delete" class="btn btn-danger">Yes</button>
+                        <a href="#" class="btn btn-secondary" data-dismiss="modal">No</a>
+                        <button type="button" id="confirm_delete" class="btn btn-primary">Yes</button>
                     </div>
                 </div>
             </div>
@@ -151,44 +157,92 @@
     </div>
 </div>
 
+
 <!-- Script pour gérer la suppression -->
 <script>
-    $(document).ready(function() {
-        let userIdToDelete = null;
+$(document).ready(function() {
+    let userIdToDelete = null;
 
-        // Ouvrir la popup et stocker l'ID de l'utilisateur
-        $('.delete-user-btn').on('click', function() {
-            userIdToDelete = $(this).data('id');
-        });
+    // Ouvrir la popup et stocker l'ID de l'utilisateur
+    $('.delete-user-btn').on('click', function() {
+        userIdToDelete = $(this).data('id');
+    });
 
-        // Lorsque l'admin clique sur "Yes"
-        $('#confirm_delete').on('click', function() {
-            if (!userIdToDelete) return;
+    // Lorsque l'admin clique sur "Yes"
+    $('#confirm_delete').on('click', function() {
+        if (!userIdToDelete) return;
 
-            let deleteUrl = '/users/' + userIdToDelete;
-            console.log("Deleting user:", deleteUrl); // Debugging
+        let deleteUrl = '/users/' + userIdToDelete;
+        console.log("Deleting user:", deleteUrl); // Debugging
 
-            $.ajax({
-                url: deleteUrl,
-                type: 'DELETE',
-                data: {
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(response) {
-                    console.log("Server Response:", response); // Debugging
+        $.ajax({
+            url: deleteUrl,
+            type: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                console.log("Server Response:", response); // Debugging
 
-                    // Supprimer la ligne du tableau après suppression
-                    $('#user-row-' + userIdToDelete).remove();
-                    
-                    // Fermer la popup
-                    $('#delete_modal').modal('hide');
-                },
-                error: function(xhr) {
-                    console.error("Error deleting user:", xhr.responseText); // Debugging
-                    alert("Failed to delete user. Check console.");
-                }
-            });
+                // Supprimer la ligne du tableau après suppression
+                $('#user-row-' + userIdToDelete).remove();
+
+                // Fermer la popup
+                $('#delete_modal').modal('hide');
+
+                // Afficher le message de succès dynamiquement
+                let successMessage = response.success || 'User deleted successfully';
+                let successDiv = `
+                    <div id="dynamic-success-message" style="
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background-color: rgb(86, 109, 103);
+                        color: white;
+                        padding: 15px 25px;
+                        border-radius: 5px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                        z-index: 9999;
+                    ">
+                        ${successMessage}
+                    </div>
+                `;
+                $('body').append(successDiv);
+
+                // Cacher le message après 2 secondes
+                setTimeout(function() {
+                    $('#dynamic-success-message').remove();
+                }, 2000);
+            },
+            error: function(xhr) {
+                console.error("Error deleting user:", xhr.responseText); // Debugging
+
+                // Afficher un message d'erreur dynamiquement
+                let errorMessage = xhr.responseJSON?.error || 'Failed to delete user';
+                let errorDiv = `
+                    <div id="dynamic-error-message" style="
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background-color: rgb(95, 87, 87);
+                        color: white;
+                        padding: 15px 25px;
+                        border-radius: 5px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                        z-index: 9999;
+                    ">
+                        ${errorMessage}
+                    </div>
+                `;
+                $('body').append(errorDiv);
+
+                // Cacher le message après 2 secondes
+                setTimeout(function() {
+                    $('#dynamic-error-message').remove();
+                }, 2000);
+            }
         });
     });
+});
 </script>
 @endsection

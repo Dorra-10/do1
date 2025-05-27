@@ -23,7 +23,7 @@
                         </a>
                     </li>
                   
-                @elseif (Auth::user()->hasRole('superviseur'))  
+                @elseif (Auth::user()->hasRole('supervisor'))  
 				<li class="active">
                         <a href="{{ url('/projects') }}" class="nav-link">
                             <i class="fas fa-folder"></i> <span>Projects</span>
@@ -47,12 +47,13 @@
                             <span>Access</span>
                         </a>
                     </li> 
-				<li class="submenu">
-						<a href="#"><i class="fas fa-user"></i> <span>Users</span> <span class="menu-arrow"></span></a>
-							<ul class="submenu_class" style="display: none;">
-									<li><a href="{{ url('users') }}">All Users
-                        </a></li>		
-							</ul>
+                    <li >
+                        <a href="{{ url('users') }}" class="nav-link">
+                        <i class="fas fa-user"></i>
+                            <span>Users</span>
+                        </a>
+                    </li> 			
+						</ul>
 				</li>
                 @else 
                
@@ -110,12 +111,8 @@
                            
                         </ul>
                     </li>
-                    
-                   
-                    
-                    
                 
-                    @endif    
+                @endif    
             </ul>
         </div>
     </div>

@@ -66,7 +66,7 @@
                 <div class="card card-table">
                     <div class="card-body booking_card">
                         <div class="table-responsive">
-                            <table class="datatable table table-striped table-hover table-center mb-0">
+                            <table class="datatable table table-hover table-center mb-0">
                                 <thead>
                                     <tr>
                                         <th> ID</th>
@@ -102,18 +102,15 @@
                                         data-target="#editAccessModal">
                                         <i class="fas fa-pencil-alt m-r-5"></i>
                                         </a>
-
-
-                                        
                                             <a href="#" class="delete-access-btn" 
                                             data-id="{{ $access->id }}" 
                                             data-name="{{ $access->document->name ?? 'Unknown Document' }}" 
                                             data-toggle="modal" 
                                             data-target="#delete_modal">
                                                 <i class="fas fa-trash-alt m-r-5"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
+                                         </a>
+                                    </td>
+                                </tr>
                                 @endforeach
                                 @if($accesses->isEmpty())
                                     <tr>
@@ -145,11 +142,11 @@
                 <div class="modal-body">
                     <!-- User Select -->
                     <div class="form-group">
-    <label for="userSelect">Users</label>
+                        <label for="userSelect">Users</label>
                         <div class="dropdown">
                         <button class="btn dropdown-toggle w-100" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: white; border: 1px solid #ccc; color: #333;">
-                        Select Users
-                    </button>
+                            <span id="selected-users-label">Select Users</span>
+                        </button>
                     <ul class="dropdown-menu w-100" aria-labelledby="userDropdown" style="max-height: 140px; overflow-y: auto;">
                         @foreach($users as $user)
                             @if($user->roles->contains('name', 'employee'))
@@ -190,11 +187,11 @@
 
                     <!-- Document Select -->
                     <div class="form-group">
-    <label for="documentSelect">Document</label>
-    <select class="form-control" id="documentSelect" name="document_id" size="4" style="max-height: 80px; overflow-y: auto;">
-        <option value="" disabled selected>Sélectionnez d'abord un projet</option>
-    </select>
-</div>
+                    <label for="documentSelect">Document</label>
+                    <select class="form-control" id="documentSelect" name="document_id" size="4" style="max-height: 80px; overflow-y: auto;">
+                        <option value="" disabled selected>Select project first</option>
+                    </select>
+                </div>
 
 
 <!-- Access Type Select -->
@@ -255,24 +252,21 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="delete_modal_label">Confirm deletion</h5>
+                <h5 class="modal-title" id="delete_modal_label">Confirm Deletion</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to revoke this Access ?</p>
+                <p>Are you sure you want to revoke this access ?</p>
             </div>
             <div class="modal-footer">
-                <form  method="POST" action="{{ route('access.delete') }}">
+                <form id="delete-access-form" method="POST" action="{{ route('access.delete') }}">
                     @csrf
                     @method('DELETE')
-                    <input type="hidden" name="access_id" id="access-id-to-delete" value="{{ $access->id }}">
+                    <input type="hidden" name="access_id" id="access-id-to-delete">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">
-                           Revoke
-                    </button>
-
+                    <button type="submit" class="btn btn-danger">Revoke</button>
                 </form>
             </div>
         </div>
@@ -280,100 +274,59 @@
 </div>
 
 
+
+
 <!-- Script to handle the dynamic document loading -->
 <script>
 $(document).ready(function() {
-    // ==============================================
-    // FONCTION COMMUNE DE CHARGEMENT DES DOCUMENTS
-    // ==============================================
-    function loadDocuments(projectId, selectedDocumentId = null, targetSelector = '#documentSelect') {
+    // Function to load documents for a specific project
+    function loadDocuments(projectId, targetSelector = '#documentSelect') {
         const $documentSelect = $(targetSelector);
         
         if (!projectId) {
-            $documentSelect.html('<option value="" disabled selected>Sélectionnez un projet d\'abord</option>');
-            return Promise.resolve();
+            $documentSelect.html('<option value="" disabled selected>Select a project first</option>');
+            return;
         }
 
-        $documentSelect.html('<option value="">Chargement en cours...</option>');
+        $documentSelect.html('<option value="">Loading documents...</option>');
 
-        return $.ajax({
+        $.ajax({
             url: '/get-documents/' + projectId,
             method: 'GET',
-            dataType: 'json'
-        }).then(function(documents) {
-            let options = '<option value="">Sélectionnez un document</option>';
+            dataType: 'json',
+            success: function(documents) {
+                let options = '<option value="">Select a document</option>';
+                
+                if (documents.length > 0) {
+                    documents.forEach(function(doc) {
+                        options += `<option value="${doc.id}">${doc.name}</option>`;
+                    });
+                } else {
+                    options += '<option value="" disabled>No documents available</option>';
+                }
 
-            const unlockedDocuments = documents.filter(doc => doc.is_locked === 0);
-
-            if (unlockedDocuments.length > 0) {
-                unlockedDocuments.forEach(function(doc) {
-                    const selected = (doc.id == selectedDocumentId) ? 'selected' : '';
-                    options += `<option value="${doc.id}" ${selected}>${doc.name}</option>`;
-                });
-            } else {
-                options += '<option value="" disabled>Aucun document disponible</option>';
+                $documentSelect.html(options);
+            },
+            error: function() {
+                $documentSelect.html('<option value="" disabled>Error loading documents</option>');
             }
-
-            $documentSelect.html(options);
-
-            if (selectedDocumentId && !unlockedDocuments.some(d => d.id == selectedDocumentId)) {
-                console.warn("Document précédent non disponible ou verrouillé dans ce projet");
-            }
-        }).fail(function() {
-            $documentSelect.html('<option value="" disabled>Erreur de chargement</option>');
         });
     }
 
-    // ==============================================
-    // MODAL D'AJOUT - GESTION
-    // ==============================================
-    $('#givePermissionModal').on('show.bs.modal', function() {
-        const projectId = $('input[name="project_id"]:checked').val();
-        loadDocuments(projectId, null, '#givePermissionModal #documentSelect');
-    });
-
+    // Handle project selection change
     $(document).on('change', 'input[name="project_id"]', function() {
         const projectId = $(this).val();
-        loadDocuments(projectId, null, '#givePermissionModal #documentSelect');
+        loadDocuments(projectId, '#givePermissionModal #documentSelect');
     });
 
-    // ==============================================
-    // GESTION DU BOUTON "Give Permission and Add Another"
-    // ==============================================
-    $('#addAndStay').on('click', function(e) {
-        e.preventDefault();
-
-        const form = $('#givePermissionForm');
-        const formData = form.serialize();
-
-        $.ajax({
-            url: form.attr('action'),
-            method: 'POST',
-            data: formData,
-            success: function(response) {
-                alert('Access granted to users successfully!');
-
-                // Vider les champs sauf le projet sélectionné
-                const selectedProjectId = $('input[name="project_id"]:checked').val();
-                $('#givePermissionForm')[0].reset();
-
-                // Reselect the project (if needed visually)
-                if (selectedProjectId) {
-                    $('input[name="project_id"][value="' + selectedProjectId + '"]').prop('checked', true);
-                    loadDocuments(selectedProjectId, null, '#documentSelect');
-                }
-            },
-            error: function(xhr) {
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    alert('Erreur : ' + xhr.responseJSON.message);
-                } else {
-                    alert('Une erreur s\'est produite.');
-                }
-            }
-        });
+    // Initialize when modal opens
+    $('#givePermissionModal').on('show.bs.modal', function() {
+        const projectId = $('input[name="project_id"]:checked').val();
+        if (projectId) {
+            loadDocuments(projectId, '#givePermissionModal #documentSelect');
+        }
     });
 });
-
 
 
 
@@ -396,7 +349,7 @@ function loadDocuments(projectId, selectedDocId, selectElement) {
                 $select.empty();
 
                 // Ajout d'une option par défaut
-                $select.append(`<option value="">-- Sélectionner un document --</option>`);
+                $select.append(`<option value="">-- Select Document --</option>`);
 
                 documents.forEach(doc => {
                     const selected = doc.id === selectedDocId ? 'selected' : '';
@@ -459,10 +412,14 @@ $(document).on('click', '.edit-access-btn', function () {
 
 
     
-$(document).on('click', '.delete-document-btn', function() {
-    var accessId = $(this).data('id');
-    $('#access-id-to-delete').val(accessId);
-});
+
+    document.querySelectorAll('.delete-access-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const accessId = this.getAttribute('data-id');
+            document.getElementById('access-id-to-delete').value = accessId;
+            $('#delete_modal').modal('show');
+        });
+    });
 
 
 
@@ -473,16 +430,25 @@ $(document).on('click', '.delete-document-btn', function() {
 <!-- JavaScript pour mettre à jour le texte du bouton avec les utilisateurs sélectionnés -->
 <script>
     $(document).ready(function() {
-        // Lorsque l'option dropdown est ouverte
-        $('#userDropdown').on('click', function() {
-            var selectedUsers = [];
-            $('.user-checkbox:checked').each(function() {
-                selectedUsers.push($(this).next('label').text()); // Récupérer le nom de l'utilisateur sélectionné
-            });
-            $('#userDropdown').text(selectedUsers.join(', ') || 'Select Users');
+    $('.user-checkbox').on('change', function() {
+        var selectedUsers = [];
+        $('.user-checkbox:checked').each(function() {
+            selectedUsers.push($(this).next('label').text().trim());
         });
+        
+        $('#dropdown-text').text(selectedUsers.length ? selectedUsers.join(', ') : 'Select Users');
     });
+});
+
 </script>
+<style>
+/* Griser les éléments cochés */
+.dropdown-item:has(input:checked) {
+    background-color: #e0e0e0 !important;
+    color: #000 !important;
+}
+</style>
+
 <style>
 /* Griser les éléments cochés */
 .dropdown-item:has(input:checked) {

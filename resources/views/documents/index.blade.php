@@ -97,7 +97,6 @@
                                         <th>Company</th>
                                         <th>Date</th>
                                         <th>Description</th>
-                                
                                         <th class="text-right">Actions</th>
                                </tr>
                                 </thead>
@@ -156,10 +155,6 @@
                                                         <i class="fas fa-pencil-alt"></i>
                                                     </a>
                                                 @endcan
-
-
-                                               
-
                                                 {{-- Bouton de suppression --}}
                                                 @can('delete document')
                                                     <a href="#" 
@@ -174,47 +169,38 @@
 
 
                                                 {{-- Icône de téléchargement --}}
-                                                @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess || $hasReadAccess)
+                                                @if ($user->hasRole('admin') || $user->hasRole('supervisor') || $hasWriteAccess || $hasReadAccess)
                                                     <a 
-                                                        href="{{ $isLocked ? '#' : route('documents.download', $document->id) }}" 
+                                                        href="{{ route('documents.download', $document->id) }}" 
                                                         class="download-document-btn"
-                                                       
-                                                    >
+                                                        title="Download">
                                                         <i class="fas fa-download m-r-5"></i>
                                                     </a>
                                                 @endif
 
                                                 {{-- Icône de révision --}}
-                                                @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
-                                                    <a href="{{ $isLocked ? '#' : route('documents.revision', $document->id) }}"
-                                                    class="revision-document-btn "
-                                                    
-                                                    data-id="{{ $document->id }}" data-toggle="modal" data-target="#revisionModal">
+                                                @if ($user->hasRole('admin') || $user->hasRole('supervisor') || $hasWriteAccess)
+                                                    <a 
+                                                        href="{{ route('documents.revision', $document->id) }}"
+                                                        class="revision-document-btn"
+                                                        data-id="{{ $document->id }}" 
+                                                        data-toggle="modal" 
+                                                        data-target="#revisionModal"
+                                                        title="upload">
                                                         <i class="fas fa-edit m-r-5"></i> 
                                                     </a>
                                                 @endif
 
+                                                @if ($user->hasRole('admin'))
+                                            <a href="#"
+                                            class="export-document-btn {{ $document->is_exported ? 'exported' : '' }}"
+                                            title="{{ $document->is_exported ? 'Document Exported - Click to re-export' : 'Export this document' }}"
+                                            onclick="openExportModal({{ $document->id }})"
+                                            id="export-icon-{{ $document->id }}">
+                                                <i class="fas fa-file-export m-r-5"></i>
+                                            </a>
+                                        @endif
 
-                                                  <!-- Icône de verrouillage -->
-                                                  @if ($user->hasRole('admin'))
-                                                  <a href="#" 
-                                                    class="lock-document-btn {{ $document->is_locked ? 'locked' : '' }}" 
-                                                    title="{{ $document->is_locked ? 'Déjà verrouillé' : 'Lock this document' }}"
-                                                    data-locked="{{ $document->is_locked ? 'true' : 'false' }}"
-                                                    onclick="{{ !$document->is_locked ? 'openLockModal('.$document->id.')' : 'return false;' }}"
-                                                    id="lock-icon-{{ $document->id }}">
-                                                    <i class="fas {{ $document->is_locked ? 'fa-lock' : 'fa-unlock' }} m-r-5"></i>
-                                                    </a>
-
-                                                @endif
-
-                                                <!-- Formulaire caché -->
-                                                <form id="lock-form-{{ $document->id }}" 
-                                                    action="{{ route('documents.lock', $document->id) }}" 
-                                                    method="POST" 
-                                                    style="display: none;">
-                                                    @csrf
-                                                </form>
 
                                             </td>
                                         </tr>
@@ -261,7 +247,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addDocumentModalLabel">Add</h5>
+                <h5 class="modal-title" id="addDocumentModalLabel">Add Document</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -391,7 +377,7 @@
 </div>
 
 
-<!-- Modal Delete Document -->
+<!-- Delete Confirmation Modal -->
 <div class="modal fade" id="delete_modal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -405,17 +391,17 @@
                 <p>Are you sure you want to delete this document?</p>
             </div>
             <div class="modal-footer">
-                <!-- Form for deletion -->
                 <form id="deleteForm" method="POST" action="" style="display: inline;">
                     @csrf
                     @method('DELETE')
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
                     <button type="submit" class="btn btn-danger">Yes</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
 
 
 
@@ -442,25 +428,26 @@
 
 
 <!-- Export confirmation -->
-<div class="modal fade" id="lockModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade" id="exportModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Confirm lock</h5>
+        <h5 class="modal-title">Confirm Export</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-       Are your sure you want to export this document ?
+        Are you sure you want to export this document?
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
-        <button type="button" class="btn btn-primary" id="confirmLockBtn">Yes</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="confirmExportBtn">Export</button>
       </div>
     </div>
   </div>
 </div>
+
 
 
 <!-- Modal Revision -->
@@ -478,7 +465,7 @@
                     @csrf
                     <div class="form-group">
                         <label for="file">Choose file</label>
-                        <input type="file" name="file" id="file" class="form-control" required accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.catpart,.catproduct,.cgr">
+                        <input type="file" name="file" id="file" class="form-control" required accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.catpart,.catproduct,.cgr,.stl,.igs,.iges,.stp,.step">
                         <div id="fileError" class="text-danger"></div>
                     </div>
                     <button type="submit" class="btn btn-success">Submit</button>
@@ -613,25 +600,21 @@ function showAlert(message, type = 'success') {
     
 
 
-
-
-
-
 //icone
 // lock.js - Version finale testée
 document.addEventListener('DOMContentLoaded', function () {
-    window.currentLockDocId = null;
+    window.currentExportDocId = null;
 
-    // Fonction pour ouvrir la modale
-    window.openLockModal = function (docId) {
-        window.currentLockDocId = docId;
-        $('#lockModal').modal('show');
+    // Fonction pour ouvrir la modale d'export
+    window.openExportModal = function (docId) {
+        window.currentExportDocId = docId;
+        $('#exportModal').modal('show');
     };
 
-    // Lors du clic sur "confirmer"
-    document.getElementById('confirmLockBtn').addEventListener('click', async function () {
-        if (!window.currentLockDocId) {
-            alert('Aucun document sélectionné');
+    // Lors du clic sur "Exporter"
+    document.getElementById('confirmExportBtn').addEventListener('click', async function () {
+        if (!window.currentExportDocId) {
+            alert('Aucun document sélectionné pour l\'exportation.');
             return;
         }
 
@@ -643,10 +626,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
                 csrfToken = match ? decodeURIComponent(match[1]) : null;
             }
-            if (!csrfToken) throw new Error('Impossible de récupérer le token CSRF');
+            if (!csrfToken) throw new Error('Impossible de récupérer le token CSRF.');
 
             // Envoi POST
-            const response = await fetch(`/documents/${window.currentLockDocId}/lock`, {
+            const response = await fetch(`/documents/${window.currentExportDocId}/export`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': csrfToken,
@@ -656,46 +639,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 body: new URLSearchParams({
                     '_token': csrfToken,
-                    'document_id': window.currentLockDocId
+                    'document_id': window.currentExportDocId
                 })
             });
 
+            const data = await response.json();
+
             if (response.status === 419) {
-                const error = await response.json();
-                throw new Error(error.message || 'Session expirée - Veuillez recharger');
+                throw new Error(data.message || 'Session expirée - Veuillez rafraîchir la page.');
             }
 
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                // Afficher le message d'erreur spécifique du backend
+                throw new Error(data.message || `Erreur HTTP : ${response.status}`);
             }
-
-            const data = await response.json();
 
             if (data.success) {
                 // Mise à jour de l’icône courante
-                const lockIcon = document.getElementById(`lock-icon-${window.currentLockDocId}`);
-                if (lockIcon) {
-                    lockIcon.innerHTML = '<i class="fas fa-lock m-r-5" style="color:#03A9F4"></i>';
-                    lockIcon.onclick = null;
+                const exportBtn = document.getElementById(`export-icon-${window.currentExportDocId}`);
+                if (exportBtn) {
+                    exportBtn.classList.add('exported');
+                    exportBtn.setAttribute('title', 'Document exporté - Cliquez pour réexporter');
                 }
+                $('#exportModal').modal('hide');
 
-                // Désactive tous les autres boutons lock
-                const allLockIcons = document.querySelectorAll('.lock-icon');
-                allLockIcons.forEach(icon => {
-                    icon.style.pointerEvents = 'none'; // Empêche les clics
-                    icon.style.opacity = 0.5; // Optionnel : rend visuellement inactif
-                });
-
-                $('#lockModal').modal('hide');
-
-                // Affichage d’un message flottant de succès
+                // Message flottant de succès
                 const msg = document.createElement('div');
-                msg.textContent = 'Document exported successfulyy';
+                msg.textContent = data.message || 'Document exporté avec succès.';
                 msg.style = `
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background-color:rgb(86, 109, 103); ;
+                    background-color: #56766b;
                     color: white;
                     padding: 12px 20px;
                     border-radius: 5px;
@@ -706,74 +681,101 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
         } catch (error) {
-            console.error('Échec critique:', error);
-            alert(`ERREUR: ${error.message}`);
-            window.location.reload(); // Rechargement forcé si grave
+            console.error('Échec de l\'exportation :', error);
+            // Afficher le message d'erreur spécifique
+            const errorMsg = document.createElement('div');
+            errorMsg.textContent = error.message;
+            errorMsg.style = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background-color: rgb(95, 87, 87);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 5px;
+                z-index: 10000;
+            `;
+            document.body.appendChild(errorMsg);
+            setTimeout(() => errorMsg.remove(), 2500);
+
         }
     });
 });
-
 </script>
 
-<style>
-    .lock-document-btn i {
-        color: grey;
-        cursor: pointer;
-        transition: color 0.3s ease;
-    }
+<style>/* Style pour l'icône d'export */
+/* Style pour l'icône d'export */
+.export-document-btn i {
+    color: var(--default-color); /* gris par défaut */
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
 
-    .lock-document-btn.locked i {
-        color: #03A9F4;
-        cursor: default;
-    }
+/* Une fois exporté, l'icône devient bleue et reste bleue */
+.export-document-btn.exported i {
+    color: var(--exported-color); /* bleu */
+    cursor: pointer; /* reste cliquable */
+}
 
-    /* Optionnel : popup */
-    .custom-modal {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background-color: rgba(0,0,0,0.5);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-    }
-
-    .custom-modal-content {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        text-align: center;
-    }
-
-    .custom-modal-content button {
-        margin: 10px;
-    }
-    .edit-document-btn.locked i,
-/* Dans votre fichier CSS principal */
+/* Optionnel : styles désactivés généraux */
 .disabled-action {
     opacity: 0.6;
     cursor: not-allowed !important;
 }
 
-.locked {
-    cursor: default !important;
-}
-
-[data-locked="true"] {
-    pointer-events: none;
-}
-
 /* Couleurs personnalisées */
 :root {
-    --locked-color: #00796B;
-    --disabled-color: #6c757d;
+    --exported-color: #03A9F4;
+    --default-color: grey;
+}
+
+/* Modal perso */
+.custom-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.custom-modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.custom-modal-content button {
+    margin: 10px;
+}
+/* Pagination style matching history */
+.pagination {
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.pagination .page-link {
+    color: #0d6efd;
+    margin: 0 5px;
+    border-radius: 4px;
+}
+
+.showing-results {
+    color: #6c757d;
+    font-size: 0.9rem;
 }
 
 </style>
-
-
-
 
 
 

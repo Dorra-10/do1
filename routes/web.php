@@ -30,7 +30,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 });
 
 // Routes accessibles uniquement au admin
-Route::group(['middleware' => ['role:admin']], function () {
+Route::group(['middleware' => ['auth','role:admin']], function () {
     // Permissions
     Route::resource('permissions', App\Http\Controllers\PermissionController::class);
     Route::delete('permissions/{permissionId}/delete', [App\Http\Controllers\PermissionController::class, 'destroy']);
@@ -45,22 +45,17 @@ Route::group(['middleware' => ['role:admin']], function () {
     Route::resource('projects', ProjectController::class)->except(['index', 'store']);
     
      // Pour stocker un projet
-    Route::post('/projects/store', [ProjectController::class, 'store'])->name('projects.store');
-    Route::get('/projects/{project}/edit', [DocumentController::class, 'edit'])->name('projects.edit');
-    Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
+
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
     //documents
-    Route::post('/documents/upload', [DocumentController::class, 'upload'])->name('documents.upload');
 
-    Route::get('/documents/{document}/edit', [DocumentController::class, 'edit'])->name('documents.edit');
-    Route::put('documents/{document}', [DocumentController::class, 'update'])->name('documents.update');  // Mettre à jour un document
+    // Mettre à jour un document
     // Supprimer un document
     Route::delete('documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
      //Impo/Expo
      Route::get('/export', [ExportController::class, 'index'])->name('impoexpo.expo.index');
-     Route::post('/documents/{id}/lock', [DocumentController::class, 'lock'])->name('documents.lock');
+     Route::post('/documents/{id}/export', [DocumentController::class, 'export'])->name('documents.export');
      Route::get('exports/{id}/download', [ExportController::class, 'download'])->name('exports.download');
-     Route::delete('exports/{export}', [ExportController::class, 'destroy'])->name('exports.destroy');
      Route::get('/import', [ImportController::class, 'index'])->name('impoexpo.impo.index');
      Route::post('/imports/upload', [ImportController::class, 'upload'])->name('imports.upload');
      Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('auth');
@@ -69,7 +64,7 @@ Route::group(['middleware' => ['role:admin']], function () {
 });
 
 // Routes accessibles aux admin, superviseur et employé
-Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], function () {
+Route::group(['middleware' => ['auth', 'role:admin|supervisor|employee']], function () {
     // Route pour voir les projets
     Route::match(['get', 'post'], '/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::post('/projects/search', [ProjectController::class, 'search'])->name('projects.search');
@@ -84,12 +79,12 @@ Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], func
     Route::post('/documents/store', [DocumentController::class, 'store'])->name('documents.store');
     Route::get('projects/{project}/documents', [ProjectController::class, 'showDocuments'])->name('projects.documents');
     Route::prefix('projects/{projectId}/documents')->group(function () {
-    Route::get('/', [ProjectController::class, 'showDocuments'])->name('projects.documents');
-        Route::get('/download/{documentId}', [ProjectController::class, 'downloadDocument'])->name('projects.documents.download');
-        Route::put('/{document}', [ProjectController::class, 'updateDocument'])->name('projects.documents.update');
-        Route::post('/revise/{documentId}', [ProjectController::class, 'reviseDocument'])->name('projects.documents.revise');
-        Route::delete('/delete/{documentId}', [ProjectController::class, 'deleteDocument'])->name('projects.documents.delete');
-    });
+        Route::get('/', [ProjectController::class, 'showDocuments'])->name('projects.documents');
+            Route::get('/download/{documentId}', [ProjectController::class, 'downloadDocument'])->name('projects.documents.download');
+            Route::put('/{document}', [ProjectController::class, 'updateDocument'])->name('projects.documents.update');
+            Route::post('/revise/{documentId}', [ProjectController::class, 'reviseDocument'])->name('projects.documents.revise');
+            Route::delete('/delete/{documentId}', [ProjectController::class, 'deleteDocument'])->name('projects.documents.delete');
+        });
     Route::get('documents/{id}/download', [DocumentController::class, 'download'])->name('documents.download');
 
     //History
@@ -98,12 +93,19 @@ Route::group(['middleware' => ['auth', 'role:admin|superviseur|employee']], func
 
 });
 
-Route::group(['middleware' => ['role:admin|superviseur']], function () {
+Route::group(['middleware' => ['auth','role:admin|supervisor']], function () {
+   
+    Route::resource('projects', ProjectController::class)->except(['index', 'store']);
     Route::post('/projects/store', [ProjectController::class, 'store'])->name('projects.store');
     Route::put('/projects/{id}', [ProjectController::class, 'update'])->name('projects.update');
     Route::resource('users', UserController::class)->except(['show']);
-    //Access Route
-   
+    
+    Route::get('/projects/{project}/edit', [DocumentController::class, 'edit'])->name('projects.edit');
+
+    Route::get('/documents/{document}/edit', [DocumentController::class, 'edit'])->name('documents.edit');
+    Route::put('documents/{document}', [DocumentController::class, 'update'])->name('documents.update'); 
+    Route::post('/documents/upload', [DocumentController::class, 'upload'])->name('documents.upload');
+        //Access Route
     Route::get('/access', [AccessController::class, 'index'])->name('access.index');
     Route::get('/give-access', [AccessController::class, 'giveAccessForm'])->name('giveAccessForm');  // Pour afficher le formulaire
     Route::post('/give-access', [AccessController::class, 'giveAccess'])->name('giveAccess');  // Pour traiter le formulaire

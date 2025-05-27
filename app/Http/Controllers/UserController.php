@@ -106,13 +106,14 @@ class UserController extends Controller
         $user = User::find($id);
         
         if (!$user) {
-            return redirect()->route('role-permission.user.index')->with('error', 'User not found');
+            return response()->json(['error' => 'User Not Found'], 404);
         }
-    
+        
         $user->delete();
         
-        return redirect()->route('role-permission.user.index')->with('success', 'User deleted successfully');
+        return response()->json(['success' => 'User Deleted Successfully']);
     }
+    
     
 
 }

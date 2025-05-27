@@ -1,6 +1,31 @@
 @extends('layouts.app')
 
 @section('content')
+@if (session('welcome'))
+    <div id="welcome-message" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color:rgb(86, 109, 103);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 9999;
+    ">
+        {{ session('welcome') }}
+    </div>
+
+    <script>
+        setTimeout(function() {
+            var message = document.getElementById('welcome-message');
+            if (message) {
+                message.style.display = 'none';
+            }
+        }, 3000);
+    </script>
+@endif
+
 @if (session('success'))
         <div id="success-message" style="
             position: fixed;
@@ -103,7 +128,7 @@
                                         @auth
                                         @php $user = auth()->user(); @endphp
 
-                                        @if ($user->hasRole('admin') || $user->hasRole('superviseur'))
+                                        @if ($user->hasRole('admin') || $user->hasRole('supervisor'))
                                             <th class="text-right">Actions</th>
                                         @endif
                                     @endauth
@@ -128,14 +153,14 @@
                                                         <i class="fas fa-pencil-alt m-r-5"></i> 
                                                     </a>
                                                 @endcan
-                                                @can('delete project')
+                                                @if ($user->hasRole('admin'))
                                                     <a href="#" class="delete-project-btn" 
                                                        data-id="{{ $project->id }}" 
                                                        data-toggle="modal" 
                                                        data-target="#delete_modal_{{ $project->id }}">
                                                         <i class="fas fa-trash-alt m-r-5"></i> 
                                                     </a>
-                                                @endcan
+                                                @endif
                                             </td>
                                         </tr>
                                         @empty
@@ -307,6 +332,7 @@ $('.delete-document-btn').click(function() {
     const deleteUrl = '{{ route("documents.destroy", ":id") }}'.replace(':id', documentId);
     $('#deleteForm').attr('action', deleteUrl);
 });
+
 
 // ✅ Gestion du bouton de modification de projet
 $('.edit-project-btn').click(function() {

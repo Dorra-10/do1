@@ -44,7 +44,7 @@ class ImportController extends Controller
 
     // Nettoyer le nom du fichier
     $baseName = Str::slug(pathinfo($validated['name'], PATHINFO_FILENAME));
-    $fileName = $baseName . '-' . now()->format('d-m-Y') . '.' . $extension;
+    $fileName = $baseName . '.' . now()->format('d-m-Y') . '.' . $extension;
 
     // 🔒 Vérification du nom globalement (pas seulement par projet)
     if (Import::where('name', $fileName)->exists()) {

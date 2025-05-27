@@ -27,6 +27,7 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        session()->flash('welcome', 'Welcome ' . auth()->user()->name . ' to your EDMS !');
 
         // Redirection vers la liste des projets après connexion
         return redirect()->intended(route('projects.index'));

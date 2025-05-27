@@ -29,7 +29,7 @@ class SendNewUserCredentials extends Notification
     
         return (new MailMessage)
         ->subject('Your account has been successfully created')
-        ->greeting('Good Morning' . $notifiable->name . ',')
+        ->greeting('Good Morning ' . $notifiable->name . ',')
         ->line('An account has been created for you on our application.')
         ->line('Here are your login details:')
         ->line('Email : ' . $notifiable->email)

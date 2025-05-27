@@ -101,8 +101,8 @@
                                                 <div class="col-md-8">
                                                     @if (Auth::user()->hasRole('admin'))
                                                         Admin
-                                                    @elseif (Auth::user()->hasRole('superviseur'))
-                                                        Superviseur
+                                                    @elseif (Auth::user()->hasRole('supervisor'))
+                                                        Supervisor
                                                     @elseif (Auth::user()->hasRole('employee'))
                                                         Employé
                                                     @endif

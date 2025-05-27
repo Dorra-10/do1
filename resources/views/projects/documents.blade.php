@@ -96,23 +96,20 @@
 
                                                 {{-- Bouton de modification --}}
                                                 @can('update document')
-                                                    <a href="#"
-                                                        class="edit-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
-                                                        data-id="{{ $document->id }}"
-                                                        data-name="{{ $document->name }}"
-                                                        data-project_id="{{ $document->project_id }}"
-                                                        data-owner="{{ $document->owner }}"
-                                                        data-company="{{ $document->company }}"
-                                                        data-description="{{ $document->description }}"
-                                                        data-date_added="{{ $document->date_added }}"
-                                                        {{ $isLocked ? '' : 'data-toggle=modal data-target=#editDocumentModal' }}
-                                                        onclick="{{ $isLocked ? 'return false;' : '' }}"
-                                                        style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}"
-                                                        title="{{ $isLocked ? 'Document verrouillé' : 'Edit' }}">
-                                                        <i class="fas fa-pencil-alt"></i>
+                                                    <a href="#" class="edit-document-btn" 
+                                                    data-id="{{ $document->id }}"
+                                                    data-name="{{ $document->name }}"
+                                                    data-project_id="{{ $document->project_id }}"
+                                                    data-owner="{{ $document->owner }}"
+                                                    data-company="{{ $document->company }}"
+                                                    data-description="{{ $document->description ?? '' }}"
+                                                    data-date_added="{{ $document->date_added ? $document->date_added->format('Y-m-d') : '' }}"
+                                                    data-toggle="modal" 
+                                                    data-target="#editDocumentModal">
+                                                        <i class="fas fa-pencil-alt m-r-5"></i>
                                                     </a>
                                                 @endcan
-
+                                        
                                                 {{-- Bouton de suppression --}}
                                                 @can('delete document')
                                                     <a href="#" 
@@ -125,7 +122,7 @@
                                                 @endcan
 
                                                 {{-- Icône de téléchargement --}}
-                                                @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess || $hasReadAccess)
+                                                @if ($user->hasRole('admin') || $user->hasRole('supervisor') || $hasWriteAccess || $hasReadAccess)
                                                     <a 
                                                         href="{{ $isLocked ? '#' : route('documents.download', $document->id) }}" 
                                                         class="download-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
@@ -137,7 +134,7 @@
                                                 @endif
 
                                                 {{-- Icône de révision --}}
-                                                @if ($user->hasRole('admin') || $user->hasRole('superviseur') || $hasWriteAccess)
+                                                @if ($user->hasRole('admin') || $user->hasRole('supervisor') || $hasWriteAccess)
                                                     <a href="{{ $isLocked ? '#' : route('documents.revision', $document->id) }}"
                                                     class="revision-document-btn {{ $isLocked ? 'locked disabled-link' : '' }}"
                                                     style="{{ $isLocked ? 'pointer-events: none; opacity: 0.5;' : '' }}" 
@@ -146,35 +143,23 @@
                                                         <i class="fas fa-edit m-r-5"></i> 
                                                     </a>
                                                 @endif
-
-
                                                   <!-- Icône de verrouillage -->
                                                   @if ($user->hasRole('admin'))
-                                                  <a href="#" 
-                                                    class="lock-document-btn {{ $document->is_locked ? 'locked' : '' }}" 
-                                                    title="{{ $document->is_locked ? 'Déjà verrouillé' : 'Lock this document' }}"
-                                                    data-locked="{{ $document->is_locked ? 'true' : 'false' }}"
-                                                    onclick="{{ !$document->is_locked ? 'openLockModal('.$document->id.')' : 'return false;' }}"
-                                                    id="lock-icon-{{ $document->id }}">
-                                                    <i class="fas {{ $document->is_locked ? 'fa-lock' : 'fa-unlock' }} m-r-5"></i>
-                                                    </a>
-
-                                                @endif
-
-
-                                                <!-- Formulaire caché -->
-                                                <form id="lock-form-{{ $document->id }}" 
-                                                    action="{{ route('documents.lock', $document->id) }}" 
-                                                    method="POST" 
-                                                    style="display: none;">
-                                                    @csrf
-                                                </form>
+                                            <a href="#"
+                                            class="export-document-btn {{ $document->is_exported ? 'exported' : '' }}"
+                                            title="{{ $document->is_exported ? 'Document Exported - Click to re-export' : 'Export this document' }}"
+                                            onclick="openExportModal({{ $document->id }})"
+                                            id="export-icon-{{ $document->id }}">
+                                                <i class="fas fa-file-export m-r-5"></i>
+                                            </a>
+                                        @endif
+                                               
 
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center">
+                                            <td colspan="8" class="text-center">
                                                 @if (!empty($searchTerm))
                                                     <div class="alert alert-info">
                                                         <i class="fas fa-search"></i> No documents found for "{{ $searchTerm }}"
@@ -183,7 +168,7 @@
                                                         Show all documents
                                                     </a>
                                                 @else
-                                                    <div class="alert alert-info">
+                                                    <div class="alert alert-info ">
                                                         <i class="fas fa-info-circle"></i> No documents available
                                                     </div>
                                                     @can('upload document')
@@ -205,76 +190,7 @@
     </div>
 </div>
 </div>
-<!-- Modal Add Document -->
 
-<div class="modal fade" id="addDocumentModal" tabindex="-1" role="dialog" aria-labelledby="addDocumentModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addDocumentModalLabel">Ajouter un Document</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form method="POST" action="{{ route('documents.upload') }}" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-body">
-                <!-- Project ID -->
-                <div class="form-group">
-                        <div class="form-group">
-                                <label for="docName">Document Name</label>
-                                <input type="text" class="form-control" id="docName" name="name" required>
-                            </div>
-                        <label for="project_id">Sélectionner un Projet</label>
-                        <select class="form-control" id="project_id" name="project_id" required>
-                            <option value="">Choisir un projet</option>
-                            @foreach($projects as $project)
-                                <option value="{{ $project->id }}">{{ $project->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="editFileType">Type</label>
-                        <select class="form-control" id="editFileType" name="file_type" required>
-                            <option value="">Select type</option>
-                            <option value="pdf">pdf</option>
-                            <option value="docx">docx</option>
-                            <option value="ppt">ppt</option>
-                            <option value="excel">excel</option>
-                            <option value="catia">actia</option>
-                        </select>
-                    </div>
-                     <!-- Access Information -->
-                    <div class="form-group">
-                        <label for="access">Accès</label>
-                        <select class="form-control" id="access" name="access">
-                            <option value="read">Lecture seule</option>
-                            <option value="read and write">Lecture et écriture</option>
-                        </select>
-                    </div>
-                    <!-- Date Added -->
-                    <div class="form-group">
-                        <label for="docDate">Date Added</label>
-                        <input type="date" class="form-control" id="docDate" name="date_added" required>
-                    </div>
-                    <!-- File Upload -->
-                    <div class="form-group">
-                        <label for="document">Télécharger un Document</label>
-                        <input type="file" class="form-control" id="document" name="document" required>
-                    </div>
-                       
-                    
-                    
-            
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Ajouter Document</button>
-                </div>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 
 <!-- Modal Delete Document -->
@@ -305,6 +221,7 @@
 
 
 <!-- Modal Edit Document -->
+
 <div class="modal fade" id="editDocumentModal" tabindex="-1" role="dialog" aria-labelledby="editDocumentModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -314,43 +231,53 @@
                     <span aria-hidden="true">×</span>
                 </button>
             </div>
-
-            <form id="editDocumentForm" method="POST" action="{{ route('projects.documents.update', [
-          'projectId' => $document->project_id,
-          'document' => $document->id
-      ]) }}">
-      @csrf
+            <form id="editDocumentForm" method="POST" action="">
+                @csrf
                 @method('PUT')
                 <div class="modal-body">
+                    <!-- Hidden Project ID -->
+                    <input type="hidden" name="project_id" id="editProjectId">
                     <!-- Document Name -->
                     <div class="form-group">
                         <label for="editName">Document Name</label>
                         <input type="text" class="form-control" id="editName" name="name" required>
+                        @error('name')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
-
-                    
+                    <!-- Owner -->
                     <div class="form-group">
                         <label for="editOwner">Owner</label>
                         <input type="text" class="form-control" id="editOwner" name="owner" required>
+                        @error('owner')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
-                    
+                    <!-- Company -->
                     <div class="form-group">
                         <label for="editCompany">Company</label>
                         <input type="text" class="form-control" id="editCompany" name="company" required>
+                        @error('company')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
-                    
+                    <!-- Description -->
                     <div class="form-group">
                         <label for="editDescription">Description</label>
                         <textarea id="editDescription" name="description" rows="4" class="form-control"></textarea>
+                        @error('description')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
-
                     <!-- Date Added -->
                     <div class="form-group">
                         <label for="editDate">Date Added</label>
                         <input type="date" class="form-control" id="editDate" name="date_added" required>
+                        @error('date_added')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
                 </div>
-
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -359,8 +286,6 @@
         </div>
     </div>
 </div>
-
-
 <!-- Modal pour afficher la description complète -->
 <div class="modal fade" id="descriptionModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -383,21 +308,21 @@
 
 
 <!-- Export confirmation -->
-<div class="modal fade" id="lockModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade" id="exportModal" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Confirmer le verrouillage</h5>
+        <h5 class="modal-title">Confirm Export</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-        Êtes-vous sûr de vouloir verrouiller ce document ?
+        Are you sure you want to export this document?
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Non</button>
-        <button type="button" class="btn btn-primary" id="confirmLockBtn">Oui</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="confirmExportBtn">Export</button>
       </div>
     </div>
   </div>
@@ -420,7 +345,7 @@
                     @csrf
                     <div class="form-group">
                         <label for="file">Choose file</label>
-                        <input type="file" name="file" id="file" class="form-control" required accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.catpart,.catproduct,.cgr">
+                        <input type="file" name="file" id="file" class="form-control" required accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.catpart,.catproduct,.cgr,.stl,.igs,.iges,.stp,.step">
                         <div id="fileError" class="text-danger"></div>
                     </div>
                     <button type="submit" class="btn btn-success">Submit</button>
@@ -441,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function () {
             const id = this.dataset.id;
             const name = this.dataset.name;
-           
+            const projectId = this.dataset.projectId || this.dataset.project_id; // les deux formats possibles
             const dateAdded = this.dataset.dateAdded || this.dataset.date_added;
             const owner = this.dataset.owner || '';
             const company = this.dataset.company || '';
@@ -453,7 +378,10 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('editCompany').value = company;
             document.getElementById('editDescription').value = description; // Pour textarea, on utilise .value
 
-        
+            // Projet
+            if (projectId) {
+                document.getElementById('editProjectId').value = projectId;
+            }
 
             // Date - format YYYY-MM-DD
             if (dateAdded) {
@@ -470,9 +398,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
-
-
-
 
 document.addEventListener('DOMContentLoaded', function() {
     // Gestion du clic sur "Voir plus"
@@ -496,9 +421,7 @@ document.addEventListener('DOMContentLoaded', function() {
     formAction = formAction.replace(':id', documentId);
     $('#deleteForm').attr('action', formAction);
 }
-
-        // Revision document modal
-        $('.revision-document-btn').click(function() {
+$('.revision-document-btn').click(function() {
             let documentId = $(this).data('id');
             console.log("ID du document : " + documentId);
             $('#revisionForm').attr('action', '/documents/revision/' + documentId); // Set correct action
@@ -506,165 +429,227 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // AJAX request for document revision
-        $('#revisionForm').submit(function(e) {
-            e.preventDefault();
-            let formData = new FormData(this);
-            let documentId = $('#revisionForm').attr('action').split('/').pop();
-            
-            $.ajax({
-                url: '/documents/' + documentId + '/revision', 
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    console.log("Document mis à jour avec succès");
-                    $('#revisionModal').modal('hide');
-                    location.reload(); // Reload the page to show updated content
-                },
-                error: function(xhr, status, error) {
-                    console.log("Erreur lors de la mise à jour du document");
-                    $('#fileError').text("Erreur de mise à jour du document.");
-                }
-            });
-        });
+      $('#revisionForm').submit(function(e) {
+    e.preventDefault();
+    let formData = new FormData(this);
+    let documentId = $('#revisionForm').attr('action').split('/').pop();
+
+    $.ajax({
+        url: '/documents/' + documentId + '/revision',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            showAlert(response.success, 'success');
+            $('#revisionModal').modal('hide');
+            setTimeout(() => location.reload(), 1500);
+        },
+        error: function(xhr) {
+            let message = xhr.responseJSON?.error || "Erreur inconnue.";
+            showAlert(message, 'error');
+        }
+    });
+});
+
+// ✅ Fonction pour afficher un message dynamique
+function showAlert(message, type = 'success') {
+    const color = type === 'success' ? 'rgb(68, 97, 89)' : 'rgb(95, 87, 87)';
+    const alertDiv = document.createElement('div');
+    alertDiv.id = 'alert-message';
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.backgroundColor = color;
+    alertDiv.style.color = 'white';
+    alertDiv.style.padding = '15px 25px';
+    alertDiv.style.borderRadius = '5px';
+    alertDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    alertDiv.style.zIndex = 9999;
+    alertDiv.innerText = message;
+
+    document.body.appendChild(alertDiv);
+
+    setTimeout(() => {
+        if (alertDiv) alertDiv.remove();
+    }, 3000);
+}
+
 
 
 //icone
 // lock.js - Version finale testée
-document.addEventListener('DOMContentLoaded', function() {
-    // Stockage global de l'ID
-    window.currentLockDocId = null;
+document.addEventListener('DOMContentLoaded', function () {
+    window.currentExportDocId = null;
 
-    // Ouverture modale
-    window.openLockModal = function(docId) {
-        window.currentLockDocId = docId;
-        $('#lockModal').modal('show');
+    // Fonction pour ouvrir la modale d'export
+    window.openExportModal = function (docId) {
+        window.currentExportDocId = docId;
+        $('#exportModal').modal('show');
     };
 
-    // Gestionnaire de clic amélioré
-    document.getElementById('confirmLockBtn').addEventListener('click', async function() {
-        if (!window.currentLockDocId) {
-            alert('Aucun document sélectionné');
+    // Lors du clic sur "Exporter"
+    document.getElementById('confirmExportBtn').addEventListener('click', async function () {
+        if (!window.currentExportDocId) {
+            alert('Aucun document sélectionné pour l\'exportation.');
             return;
         }
 
         try {
-            // Méthode 1 : Récupération via meta tag
+            // Récupération CSRF token
             let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-            
-            // Méthode 2 : Fallback direct pour Laravel
-            if (!csrfToken && window.Laravel?.csrfToken) {
-                csrfToken = window.Laravel.csrfToken;
-            }
-
-            // Méthode 3 : Récupération depuis les cookies
+            if (!csrfToken && window.Laravel?.csrfToken) csrfToken = window.Laravel.csrfToken;
             if (!csrfToken) {
                 const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
                 csrfToken = match ? decodeURIComponent(match[1]) : null;
             }
+            if (!csrfToken) throw new Error('Impossible de récupérer le token CSRF.');
 
-            if (!csrfToken) {
-                throw new Error('Impossible de récupérer le token CSRF');
-            }
-
-            // Envoi avec triple protection
-            const response = await fetch(`/documents/${window.currentLockDocId}/lock`, {
+            // Envoi POST
+            const response = await fetch(`/documents/${window.currentExportDocId}/export`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': csrfToken,
-                    'X-XSRF-TOKEN': csrfToken, // Pour les cookies encryptés
+                    'X-XSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
                     '_token': csrfToken,
-                    'document_id': window.currentLockDocId
+                    'document_id': window.currentExportDocId
                 })
             });
 
+            const data = await response.json();
+
             if (response.status === 419) {
-                const error = await response.json();
-                throw new Error(error.message || 'Session expirée - Veuillez recharger');
+                throw new Error(data.message || 'Session expirée - Veuillez rafraîchir la page.');
             }
 
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                // Afficher le message d'erreur spécifique du backend
+                throw new Error(data.message || `Erreur HTTP : ${response.status}`);
             }
 
-            const data = await response.json();
-            
-            // Mise à jour UI
             if (data.success) {
-                const lockIcon = document.getElementById(`lock-icon-${window.currentLockDocId}`);
-                if (lockIcon) {
-                    lockIcon.innerHTML = '<i class="fas fa-lock m-r-5" style="color:#00796B"></i>';
-                    lockIcon.onclick = null;
+                // Mise à jour de l’icône courante
+                const exportBtn = document.getElementById(`export-icon-${window.currentExportDocId}`);
+                if (exportBtn) {
+                    exportBtn.classList.add('exported');
+                    exportBtn.setAttribute('title', 'Document exporté - Cliquez pour réexporter');
                 }
-                $('#lockModal').modal('hide');
-                alert('Document verrouillé avec succès');
+                $('#exportModal').modal('hide');
+
+                // Message flottant de succès
+                const msg = document.createElement('div');
+                msg.textContent = data.message || 'Document exporté avec succès.';
+                msg.style = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background-color: #56766b;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 5px;
+                    z-index: 10000;
+                `;
+                document.body.appendChild(msg);
+                setTimeout(() => msg.remove(), 2500);
             }
+
         } catch (error) {
-            console.error('Échec critique:', error);
-            alert(`ERREUR: ${error.message}`);
-            window.location.reload(); // Recharge en cas d'erreur CSRF
+            console.error('Échec de l\'exportation :', error);
+            // Afficher le message d'erreur spécifique
+            const errorMsg = document.createElement('div');
+            errorMsg.textContent = error.message;
+            errorMsg.style = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background-color: rgb(95, 87, 87);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 5px;
+                z-index: 10000;
+            `;
+            document.body.appendChild(errorMsg);
+            setTimeout(() => errorMsg.remove(), 2500);
+
         }
     });
 });
+
 </script>
-<style>
-    .lock-document-btn i {
-        color: grey;
-        cursor: pointer;
-        transition: color 0.3s ease;
-    }
+<style>/* Style pour l'icône d'export */
+/* Style pour l'icône d'export */
+.export-document-btn i {
+    color: var(--default-color); /* gris par défaut */
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
 
-    .lock-document-btn.locked i {
-        color: #03A9F4;
-        cursor: default;
-    }
+/* Une fois exporté, l'icône devient bleue et reste bleue */
+.export-document-btn.exported i {
+    color: var(--exported-color); /* bleu */
+    cursor: pointer; /* reste cliquable */
+}
 
-    /* Optionnel : popup */
-    .custom-modal {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background-color: rgba(0,0,0,0.5);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-    }
-
-    .custom-modal-content {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        text-align: center;
-    }
-
-    .custom-modal-content button {
-        margin: 10px;
-    }
-    .edit-document-btn.locked i,
-/* Dans votre fichier CSS principal */
+/* Optionnel : styles désactivés généraux */
 .disabled-action {
     opacity: 0.6;
     cursor: not-allowed !important;
 }
 
-.locked {
-    cursor: default !important;
-}
-
-[data-locked="true"] {
-    pointer-events: none;
-}
-
 /* Couleurs personnalisées */
 :root {
-    --locked-color: #00796B;
-    --disabled-color: #6c757d;
+    --exported-color: #03A9F4;
+    --default-color: grey;
+}
+
+/* Modal perso */
+.custom-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.custom-modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.custom-modal-content button {
+    margin: 10px;
+}
+/* Pagination style matching history */
+.pagination {
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.pagination .page-link {
+    color: #0d6efd;
+    margin: 0 5px;
+    border-radius: 4px;
+}
+
+.showing-results {
+    color: #6c757d;
+    font-size: 0.9rem;
 }
 
 </style>

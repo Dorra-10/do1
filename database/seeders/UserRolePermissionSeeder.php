@@ -53,7 +53,7 @@ class UserRolePermissionSeeder extends Seeder
 
         // Création des rôles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $superviseurRole = Role::firstOrCreate(['name' => 'superviseur']);
+        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
         $employeeRole = Role::firstOrCreate(['name' => 'employee']);
 
         // Attribuer toutes les permissions au rôle admin
@@ -61,7 +61,7 @@ class UserRolePermissionSeeder extends Seeder
         $adminRole->syncPermissions($allPermissionNames);
 
         // Synchronisation des permissions au rôle superviseur
-        $superviseurRole->syncPermissions([
+        $supervisorRole->syncPermissions([
             'view project',
             'create project',
             'update project',
@@ -82,15 +82,15 @@ class UserRolePermissionSeeder extends Seeder
                         ]);
 
         $adminUser->assignRole($adminRole);
-        $superviseurUser = User::firstOrCreate([
-            'email' => 'siperviseur@gmail.com'
+        $supervisorUser = User::firstOrCreate([
+            'email' => 'superviseur@gmail.com'
         ], [
             'name' => 'superviseur',
             'email' => 'superviseur@gmail.com',
             'password' => Hash::make ('12345678'),
         ]);
 
-       $superviseurUser->assignRole($superviseurRole);
+       $supervisorUser->assignRole($supervisorRole);
 
 
         $employeeUser = User::firstOrCreate([

@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-    <title>WTI Dashboard Template</title>
-    <link rel="shortcut icon" type="image/x-icon" href="{{ url('assets/img/favicon.png') }}">
+    <title>EDMS</title>
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url('assets/img/logo3.png') }}">
     <link rel="stylesheet" href="{{ url('assets/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/fontawesome/css/fontawesome.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/plugins/fontawesome/css/all.min.css') }}">
@@ -28,7 +28,7 @@
 
                         {{-- Affichage du message de succès --}}
                         @if (session('success'))
-                            <div id="success-message" style="position: fixed; top: 20px; right: 20px; background-color: #4CAF50; color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999; display: flex; align-items: center;">
+                            <div id="success-message" style="position: fixed; top: 20px; right: 20px; background-color:rgb(86, 109, 103); color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999; display: flex; align-items: center;">
                                 <i class="fa fa-check-circle mr-2"></i>
                                 {{ session('success') }}
                             </div>
@@ -42,7 +42,7 @@
 
                         {{-- Affichage du message d'erreur --}}
                         @if (session('error'))
-                            <div id="error-message" style="position: fixed; top: 20px; right: 20px; background-color: #f44336; color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999; display: flex; align-items: center;">
+                            <div id="error-message" style="position: fixed; top: 20px; right: 20px; background-color: rgb(95, 87, 87); color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999; display: flex; align-items: center;">
                                 <i class="fa fa-exclamation-circle mr-2"></i>
                                 {{ session('error') }}
                             </div>
@@ -56,7 +56,7 @@
 
                         {{-- Affichage des erreurs de validation --}}
                         @if ($errors->any())
-                            <div id="error-messages" style="position: fixed; top: 20px; right: 20px; background-color: #f44336; color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999; display: flex; align-items: center;">
+                            <div id="error-messages" style="position: fixed; top: 20px; right: 20px; background-color: rgb(95, 87, 87); color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999; display: flex; align-items: center;">
                                 <i class="fa fa-exclamation-circle mr-2"></i>
                                 <div>
                                     <ul style="margin: 0; padding: 0 0 0 20px;">

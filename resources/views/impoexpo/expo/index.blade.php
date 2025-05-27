@@ -50,6 +50,8 @@
                                         <th>Owner</th>
                                         <th>Company</th>
                                         <th>Description</th>
+                                        <th>Date</th>
+
                                         <th class="text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -72,14 +74,11 @@
                                                     </button>
                                                 @endif
                                             </td>
+                                            <td>{{ $export->updated_at }}</td>
                                             <td class="text-right">
                                                 <a href="{{ route('exports.download', $export->id) }}" class="download-document-btn">
                                                     <i class="fas fa-download m-r-5"></i>
-                                                </a>
-                                           
-                                                <a href="#" class="delete-document-btn" data-id="{{ $export->id }}" data-toggle="modal" data-target="#delete_modal">
-                                            <i class="fas fa-trash-alt m-r-5"></i>
-                                        </a>
+                                              </a>
                                     </td>
                                         </tr>
                                     @empty

@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Response;
 use App\Models\Access;
 use App\Models\History;
 use App\Models\Export;
+use Spatie\PdfToText\Pdf;
+use PhpOffice\PhpWord\IOFactory;
 
 class DocumentController extends Controller
 {
@@ -34,7 +36,7 @@ class DocumentController extends Controller
     // Base de la requête
     $documentsQuery = Document::query();
 
-    if ($user->hasRole(['admin', 'superviseur'])) {
+    if ($user->hasRole(['admin', 'supervisor'])) {
         // Tous les documents pour les rôles élevés
         $projects = Project::all();
     } else {
@@ -73,7 +75,7 @@ class DocumentController extends Controller
 
 
 
-    public function store(Request $request)
+public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -130,9 +132,10 @@ class DocumentController extends Controller
         }
     }
 
+
     
   
-    public function upload(Request $request)
+public function upload(Request $request)
 {
         $validated = $request->validate([
             'document' => [
@@ -227,8 +230,8 @@ class DocumentController extends Controller
 }
 
 
-    public function download($id)
-    {
+public function download($id)
+{
         // Retrieve the document
         $document = Document::findOrFail($id); // Find the document or throw a 404 error
         History::recordAction($document->id, 'view', auth()->id());
@@ -268,7 +271,7 @@ class DocumentController extends Controller
 
         // Download the file with its original name and extension
         return Storage::disk('public')->download($filePath, $document->name);
-    }
+}
 
    
  // Afficher le formulaire d'édition d'un document
@@ -316,40 +319,46 @@ public function revision(Request $request, $id)
     DB::beginTransaction();
 
     try {
-        $document = Document::find($id);
-        if (!$document) {
-            return $request->ajax()
-                ? response()->json(['error' => 'Document not found.'], 404)
-                : redirect()->back()->with('error', 'Document not found.');
-        }
+        // Find the document or fail
+        $document = Document::findOrFail($id);
 
         $user = auth()->user();
 
-        // Check if a download token exists for this document
-        $downloadToken = session()->get("download_token_{$id}");
-        if (!$downloadToken) {
-            $msg = "You must first download the original file before modifying and re-uploading it.";
+        // Check for download token
+        if (!session()->has("download_token_{$id}")) {
+            $msg = "You must download the original file before modifying and re-uploading it.";
             return $request->ajax()
                 ? response()->json(['error' => $msg], 400)
                 : redirect()->back()->with('error', $msg);
         }
 
-        // Custom validation
+        // Validate the uploaded file
         $request->validate([
             'file' => [
                 'required',
-                function ($attribute, $value, $fail) {
-                    if (!($value instanceof \Illuminate\Http\UploadedFile)) {
-                        return $fail('The field must contain a valid file.');
-                    }
-
+                'file',
+                function ($attribute, $value, $fail) use ($document) {
                     $ext = strtolower($value->getClientOriginalExtension());
-                    $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xlsx', 'xls', 'catpart', 'stl', 'igs', 'iges', 'stp', 'step'];
+                    $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xlsx', 'xls', 'catpart', 'catproduct', 'stl', 'igs', 'iges', 'stp', 'step'];
+
+                    // Check allowed extensions
                     if (!in_array($ext, $allowed)) {
-                        $fail('Unauthorized extension: .' . $ext);
+                        $fail('Unauthorized file extension: .' . $ext);
                     }
 
-                    // Max size 20 MB
+                    // Check if extension matches the original
+                    if ($ext !== $document->file_type) {
+                        $fail("The file extension must match the original: '{$document->file_type}'.");
+                    }
+
+                    // Check file name matches the original
+                    $newName = strtolower(trim($value->getClientOriginalName()));
+                    $oldName = strtolower(trim($document->name));
+                    if ($newName !== $oldName) {
+                        $fail("The file name must be exactly the same as the original: '{$document->name}'.");
+                    }
+
+                    // Check file size (20 MB max)
                     if ($value->getSize() > 20 * 1024 * 1024) {
                         $fail('The file must not exceed 20 MB.');
                     }
@@ -358,110 +367,173 @@ public function revision(Request $request, $id)
         ]);
 
         $file = $request->file('file');
-
-        $oldName = strtolower(trim($document->name));
-        $newName = strtolower(trim($file->getClientOriginalName()));
-
-        if ($oldName !== $newName) {
-            $msg = "The file name must be exactly the same as the old one: {$document->name}";
-            return $request->ajax()
-                ? response()->json(['error' => $msg], 400)
-                : redirect()->back()->with('error', $msg);
-        }
-
         $extension = strtolower($file->getClientOriginalExtension());
-
-        if ($extension !== $document->file_type) {
-            $msg = "The file type must be the same as the old one: '{$document->file_type}'.";
-            return $request->ajax()
-                ? response()->json(['error' => $msg], 400)
-                : redirect()->back()->with('error', $msg);
-        }
 
         // Calculate the hash of the new file
         $newHash = hash_file('sha256', $file->getRealPath());
 
-        // Check if the file is identical (same hash)
+        // Check if the file is identical to the original
         if ($newHash === $document->file_hash) {
-            $msg = "The file is identical to the original. No changes detected.";
+            $msg = "The uploaded file is identical to the original. No changes detected.";
             return $request->ajax()
                 ? response()->json(['error' => $msg], 400)
                 : redirect()->back()->with('error', $msg);
         }
 
+        // Content similarity check for text-based files (PDF, DOCX)
+        $isSimilar = true;
+        if (in_array($extension, ['pdf', 'docx'])) {
+            try {
+                $originalContent = $this->extractContent(Storage::disk('public')->path($document->path), $extension);
+                $newContent = $this->extractContent($file->getRealPath(), $extension);
+
+                // Calculate similarity (0 = identical, 100 = completely different)
+                $similarityPercent = $this->calculateTextSimilarity($originalContent, $newContent);
+                
+                // Ensure content is partially modified (20-80% similarity)
+                if ($similarityPercent < 20) {
+                    $msg = "The uploaded file is too similar to the original (less than 20% difference).";
+                    return $request->ajax()
+                        ? response()->json(['error' => $msg], 400)
+                        : redirect()->back()->with('error', $msg);
+                }
+                if ($similarityPercent > 90) {
+                    $msg = "The uploaded file is too different from the original (more than 80% difference).";
+                    return $request->ajax()
+                        ? response()->json(['error' => $msg], 400)
+                        : redirect()->back()->with('error', $msg);
+                }
+            } catch (\Exception $e) {
+                // Log extraction errors and proceed
+                \Log::warning("Content similarity check failed: {$e->getMessage()}");
+                $isSimilar = true;
+            }
+        } else {
+            // For CAD files, use size-based fallback
+            $originalSize = Storage::disk('public')->size($document->path);
+            $newSize = $file->getSize();
+            $sizeDiffPercent = abs($newSize - $originalSize) / $originalSize * 100;
+            if ($sizeDiffPercent > 90) {
+                $msg = "The uploaded file appears too different from the original (size difference exceeds 80%).";
+                return $request->ajax()
+                    ? response()->json(['error' => $msg], 400)
+                    : redirect()->back()->with('error', $msg);
+            }
+        }
+
         // Delete the old file
-        $oldPath = $document->path;
-        if ($oldPath && Storage::disk('public')->exists($oldPath)) {
-            Storage::disk('public')->delete($oldPath);
+        if ($document->path && Storage::disk('public')->exists($document->path)) {
+            Storage::disk('public')->delete($document->path);
         }
 
         // Store the new file
         $newStoragePath = 'documents/' . time() . '.' . $extension;
-        Storage::disk('public')->put($newStoragePath, file_get_contents($file->getRealPath()));
-
-        if (!Storage::disk('public')->exists($newStoragePath)) {
-            throw new \Exception("The file could not be saved.");
+        $fileContent = file_get_contents($file->getRealPath());
+        if (!Storage::disk('public')->put($newStoragePath, $fileContent)) {
+            throw new \Exception("Failed to save the file.");
         }
 
-        $nameParts = explode('.', $document->name);
-            $extension = array_pop($nameParts); // Get the extension (e.g., pptx)
-            $baseNameWithDots = implode('.', array_slice($nameParts, 0, -1)); // Get the base name up to the date (e.g., FinalTest.)
-            $baseName = $baseNameWithDots; // Keep the dots as per your example (FinalTest..)
+        // Generate new file name with date
+        $originalName = pathinfo($document->name, PATHINFO_FILENAME);
+        // Remove any existing date suffix (e.g., .DD-MM-YYYY)
+        $cleanBaseName = preg_replace('/\.\d{2}-\d{2}-\d{4}$/', '', $originalName);
+        $newDate = now()->format('d-m-Y');
+        $newName = "{$cleanBaseName}.{$newDate}.{$extension}";
 
-            // Append the new date in DD-MM-YYYY format
-            $newDate = now()->format('d-m-Y');
-            $newNameWithDate = "{$baseName}.{$newDate}.{$extension}";
+        // Update document
+        $document->update([
+            'name' => $newName,
+            'file_type' => $extension,
+            'file_hash' => $newHash,
+            'path' => $newStoragePath,
+            'version' => $document->version + 1,
+            'updated_at' => now(),
+        ]);
 
-            // Update the document with the updated name
-            $document->update([
-                'name' => $newNameWithDate,
-                'file_type' => $extension,
-                'file_hash' => $newHash,
-                'path' => $newStoragePath,
-                'version' => $document->version + 1,
-                'updated_at' => now(),
-            ]);
+        // Record history
+        History::updateOrCreate(
+            ['document_id' => $document->id],
+            [
+                'document_name' => $document->name,
+                'last_modified_at' => now(),
+                'last_modified_by' => $user->id,
+            ]
+        );
 
-        // Record the history
         History::recordAction($document->id, 'modify', $user->id);
 
-        $history = History::firstOrNew(['document_id' => $document->id]);
-        $history->document_name = $document->name;
-        $history->last_modified_at = now();
-        $history->last_modified_by = $user->id;
-        $history->save();
-
-        // Clear the download token from the session after successful upload
+        // Clear download token
         session()->forget("download_token_{$id}");
 
         DB::commit();
 
-        clearstatcache();
-        if (function_exists('opcache_reset')) {
-            opcache_reset();
-        }
-
         return $request->ajax()
-            ? response()->json(['success' => 'Content updated successfully!'])
-            : redirect()->back()->with('success', 'Content updated successfully!');
+            ? response()->json(['success' => 'Document updated successfully!'])
+            : redirect()->back()->with('success', 'Document updated successfully!');
 
     } catch (\Exception $e) {
         DB::rollBack();
         $msg = 'Update failed: ' . $e->getMessage();
-
         return $request->ajax()
             ? response()->json(['error' => $msg], 500)
             : redirect()->back()->with('error', $msg);
     }
 }
 
+/**
+ * Extract text content from a file based on its type.
+ *
+ * @param string $filePath
+ * @param string $extension
+ * @return string
+ */
+private function extractContent($filePath, $extension)
+{
+    if ($extension === 'pdf') {
+        return Pdf::getText($filePath); // Requires pdftotext binary
+    } elseif ($extension === 'docx') {
+        $phpWord = IOFactory::load($filePath);
+        $text = '';
+        foreach ($phpWord->getSections() as $section) {
+            foreach ($section->getElements() as $element) {
+                if (method_exists($element, 'getText')) {
+                    $text .= $element->getText();
+                }
+            }
+        }
+        return $text;
+    }
+    return '';
+}
 
+/**
+ * Calculate text similarity using Levenshtein distance.
+ *
+ * @param string $text1
+ * @param string $text2
+ * @return float Similarity percentage (0 = identical, 100 = completely different)
+ */
+private function calculateTextSimilarity($text1, $text2)
+{
+    if (empty($text1) && empty($text2)) {
+        return 0;
+    }
+    if (empty($text1) || empty($text2)) {
+        return 100;
+    }
 
+    $len1 = strlen($text1);
+    $len2 = strlen($text2);
+    $maxLen = max($len1, $len2);
 
+    // Use Levenshtein distance for short texts
+    $lev = levenshtein($text1, $text2);
 
+    // Normalize to percentage (0 = identical, 100 = completely different)
+    return ($lev / $maxLen) * 100;
+}
 
-
-    public function destroy($id)
+public function destroy($id)
 {
     // Trouver le document dans la base de données
     $document = Document::findOrFail($id);
@@ -486,34 +558,94 @@ public function revision(Request $request, $id)
     }
 }
 
+public function export(Request $request, $id)
+    {
+        try {
+            $document = Document::findOrFail($id);
+            Log::info("Starting export for document ID {$id}: {$document->name}");
 
+            // Validate project_id
+            if (!$document->project_id) {
+                Log::warning("Document ID {$id} has no project_id");
+                return $this->errorResponse($request, 'Document must be associated with a project.', 422);
+            }
 
-public function lock(Request $request, $id)
-{
-    $document = Document::findOrFail($id);
+            // Normalize document name
+            $normalizedName = strtolower($document->name);
 
-    $document->is_locked = true;
-    $document->save();
+            // Extract base, date, and extension
+            preg_match('/^(.*?)(?:\.(\d{2}-\d{2}-\d{4}))?\.([a-zA-Z0-9]+)$/i', $normalizedName, $matches);
 
-    Export::create([
-        'name' => $document->name,
-        'file_type' => $document->file_type,
-        'project_id' => $document->project_id,
-        'path' => $document->path,
-        'date_added' => now(),
-        'owner' => $document->owner,
-        'company' => $document->company,
-        'description' => $document->description,
-    ]);
+            $baseName = $matches[1] ? trim($matches[1]) : null;
+            $date = $matches[2] ?? null;
+            $extension = $matches[3] ? strtolower($matches[3]) : null;
 
-    // Réponse JSON pour les appels JS
-    if ($request->expectsJson()) {
-        return response()->json(['success' => true]);
+            Log::info("Parsed document name: base={$baseName}, date={$date}, extension={$extension}");
+
+            // Validate name format
+            if (!$baseName || !$extension) {
+                Log::warning("Invalid document name format for ID {$id}: {$document->name}");
+                return $this->errorResponse($request, 'Invalid document name format. Expected: <base>.<DD-MM-YYYY>.<extension>', 422);
+            }
+
+            // Check for duplicate export
+            if ($baseName && $date) {
+                $searchPattern = "{$baseName}.{$date}.%";
+                $existingExport = Export::whereRaw('LOWER(name) LIKE ?', [strtolower($searchPattern)])
+                    ->where('project_id', $document->project_id)
+                    ->first();
+
+                if ($existingExport) {
+                    Log::warning("Duplicate export found for document ID {$id}: {$document->name}, existing export ID: {$existingExport->id}");
+                    return $this->errorResponse($request, 'This document has already been exported for this date.', 422);
+                }
+            }
+
+            // Create export record
+            $export = Export::create([
+                'name' => $document->name,
+                'file_type' => $document->file_type,
+                'project_id' => $document->project_id,
+                'path' => $document->path,
+                'date_added' => now(),
+                'owner' => $document->owner,
+                'company' => $document->company,
+                'description' => $document->description,
+            ]);
+            Log::info("Export created for document ID {$id}, Export ID: {$export->id}");
+
+            // Mark document as exported
+            $document->update(['is_exported' => true]);
+            Log::info("Document ID {$id} marked as exported");
+
+            return $this->successResponse($request, 'Document exported successfully.');
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::error("Document ID {$id} not found");
+            return $this->errorResponse($request, 'Document not found.', 404);
+        } catch (\Exception $e) {
+            Log::error("Error exporting document ID {$id}: {$e->getMessage()}");
+            return $this->errorResponse($request, 'An error occurred while exporting the document.', 500);
+        }
     }
 
-    // Fallback classique
-    return redirect()->route('documents.index')->with('success', 'Document successfully locked and exported.');
-}
+    private function successResponse(Request $request, $message)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+        return redirect()->route('documents.index')->with('success', $message);
+    }
+
+    private function errorResponse(Request $request, $message, $status)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['success' => false, 'message' => $message], $status);
+        }
+        return redirect()->back()->with('error', $message);
+    }
+
+
 
 
 

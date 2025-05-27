@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Document;
 use App\Models\Export;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 class ExportController extends Controller
 {
     public function index()
@@ -43,27 +44,4 @@ class ExportController extends Controller
      return Storage::disk('public')->download($filePath, $export->name);
     }
     
-
-    public function destroy(Export $export)
-{
-    try {
-        // Supprimer le fichier du stockage
-        if (Storage::disk('public')->exists($export->path)) {
-            Storage::disk('public')->delete($export->path);
-        } else {
-            return redirect()->route('impoexpo.expo.index')->with('error', 'Le fichier n\'existe pas sur le disque');
-        }
-
-        // Suppression définitive
-        $export->forceDelete();
-
-        return redirect()->route('impoexpo.expo.index')->with('success', 'Export deleted successfully !');
-
-    } catch (\Exception $e) {
-        return redirect()->route('impoexpo.expo.index')->with('error', 'Error while deleting : ' . $e->getMessage());
-    }
-}
-
-
-
 }
