@@ -274,14 +274,8 @@ class ProjectController extends Controller
                 $similarityPercent = $this->calculateTextSimilarity($originalContent, $newContent);
                 
                 // Ensure content is partially modified (20-80% similarity)
-                if ($similarityPercent < 20) {
-                    $msg = "The uploaded file is too similar to the original (less than 20% difference).";
-                    return $request->ajax()
-                        ? response()->json(['error' => $msg], 400)
-                        : redirect()->back()->with('error', $msg);
-                }
                 if ($similarityPercent > 90) {
-                    $msg = "The uploaded file is too different from the original (more than 80% difference).";
+                    $msg = "The uploaded file is too different from the original (more than 90% difference).";
                     return $request->ajax()
                         ? response()->json(['error' => $msg], 400)
                         : redirect()->back()->with('error', $msg);

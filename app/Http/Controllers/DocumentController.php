@@ -390,13 +390,7 @@ public function revision(Request $request, $id)
                 // Calculate similarity (0 = identical, 100 = completely different)
                 $similarityPercent = $this->calculateTextSimilarity($originalContent, $newContent);
                 
-                // Ensure content is partially modified (20-80% similarity)
-                if ($similarityPercent < 20) {
-                    $msg = "The uploaded file is too similar to the original (less than 20% difference).";
-                    return $request->ajax()
-                        ? response()->json(['error' => $msg], 400)
-                        : redirect()->back()->with('error', $msg);
-                }
+                
                 if ($similarityPercent > 90) {
                     $msg = "The uploaded file is too different from the original (more than 80% difference).";
                     return $request->ajax()
@@ -414,7 +408,7 @@ public function revision(Request $request, $id)
             $newSize = $file->getSize();
             $sizeDiffPercent = abs($newSize - $originalSize) / $originalSize * 100;
             if ($sizeDiffPercent > 90) {
-                $msg = "The uploaded file appears too different from the original (size difference exceeds 80%).";
+                $msg = "The uploaded file appears too different from the original (size difference exceeds 90%).";
                 return $request->ajax()
                     ? response()->json(['error' => $msg], 400)
                     : redirect()->back()->with('error', $msg);
